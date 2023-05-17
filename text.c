@@ -83,7 +83,7 @@ void add(char *text, char toInsert, int pos){
     {
       text[i] = text[i-1];
     }
-    text[pos-1] = toInsert;
+    text[pos] = toInsert;
   }
   else
   {
@@ -91,7 +91,7 @@ void add(char *text, char toInsert, int pos){
     {
       text[i] = text[i-1];
     }
-    text[pos] = toInsert;
+    text[pos+1] = toInsert;
     
   }
 }
@@ -101,14 +101,14 @@ void pop(char *text, int pos){
   int textLength = strlen(text);
   if (appendMode == 0)
   {
-    for (int i = pos-1; i<textLength; i++)
+    for (int i = pos; i<textLength; i++)
     {
       text[i-1] = text[i];
     }
   }
   else
   {
-    for (int i = pos; i<textLength; i++)
+    for (int i = pos+1; i<textLength; i++)
     {
       text[i-1] = text[i];
     }
@@ -119,8 +119,9 @@ void pop(char *text, int pos){
 
 int curToPos(Vector2 textCursor)
 {
+  printf("cursor in curtopos: %i, %i", (int)textCursor.x, (int)textCursor.y);
   int position = lin[(int)textCursor.x].start + (int)textCursor.y;
-  // printf("\n%i %i %i\n", position, lin[(int)textCursor.x].start, lin[(int)textCursor.x].stop);
+  printf("\n%i %i %i\n", position, lin[(int)textCursor.x].start, lin[(int)textCursor.x].stop);
   if (position > lin[(int)textCursor.x].stop)
   {
     appendMode = 1;
@@ -149,6 +150,8 @@ Vector2 posToCur(int position)
 
 int handleText(char *text, Vector2 textCursor, int *lineCounter)
 {
+  if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start) appendMode = 0;
+  printf("cursor in start handletext: %i, %i", (int)textCursor.x, (int)textCursor.y);
   printf("\n %i %i\n", lin[(int)textCursor.x].start, lin[(int)textCursor.x].stop);
   int position = curToPos(textCursor);
   static int key = 0;
@@ -173,11 +176,25 @@ int handleText(char *text, Vector2 textCursor, int *lineCounter)
     
   char * newText;
   if (key == 0) { return position; }
-  if (key > 38 && key < 91) 
+  if (key > 38 && key < 126) 
   { 
-    if (key > 64 ){ key += 32; }
-    add(text, (char)key, position);
-    key -=32;
+    if (key > 64 )
+    { 
+      if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT))
+      {
+        add(text, (char)key, position);
+      }
+      else
+      {
+        key += 32; 
+        add(text, (char)key, position);
+        key -=32;
+      }
+    }
+    else
+    {
+      add(text, (char)key, position);
+    }
     position++;
   }
   else if (key == 257) 
@@ -238,6 +255,7 @@ int main(int argc, char *argv[])
       }
       text[offset++] = c;
     }
+    fclose(fp);
     if (c == EOF && offset == 0) { free(text); puts("enter a file with content"); exit(1); }
     text[offset] = '\0';
   } else { puts("enter a file name please!"); exit(1); } 
@@ -275,6 +293,10 @@ int main(int argc, char *argv[])
   float lerptime = 0.1;
   bool isResizing = false;
   int resizeMargin = 20;
+  int past_biggest_y = 0;
+  int scrollOfset = 0;
+  int lowerHinge = 5;
+  int upperHinge = 14;
 
   Shader shader = LoadShader(0, "resources/text.fs");
   int cursorLoc = GetShaderLocation(shader, "cursorLoc");
@@ -283,20 +305,36 @@ int main(int argc, char *argv[])
   SetShaderValue(shader, frameLoc, &frameCounter, SHADER_UNIFORM_FLOAT);
   int isMoving = GetShaderLocation(shader, "isMoving");
   SetShaderValue(shader, isMoving, &cursorShape, SHADER_UNIFORM_INT);
+
+  int shader_screenWidth = GetShaderLocation(shader, "screenWidth");
+  int shader_screenHeight = GetShaderLocation(shader, "screenHeight");
+  SetShaderValue(shader, shader_screenWidth, &screenWidth, SHADER_UNIFORM_INT);
+  SetShaderValue(shader, shader_screenHeight, &screenHeight, SHADER_UNIFORM_INT);
   //--------------------------------------------------------------------------------------
 
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
   {
-    // printf("x: %f, y: %f\n", textCursor.x, textCursor.y);
+    printf("x: %f, y: %f\n", textCursor.x, textCursor.y);
     frameCounter++;
     float time = GetTime();
     SetShaderValue(shader, cursorLoc, &cursorPos, SHADER_UNIFORM_VEC2);
     SetShaderValue(shader, frameLoc, &time, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(shader, shader_screenWidth, &screenWidth, SHADER_UNIFORM_INT);
+    SetShaderValue(shader, shader_screenHeight, &screenHeight, SHADER_UNIFORM_INT);
     SetShaderValue(shader, isMoving, &cursorShape, SHADER_UNIFORM_INT);
+
     SetWindowSize(screenWidth, screenHeight);
     bool movedUpOrDown = false;
+    bool movedLeftOrRight = false;
     if (!insertMode){
+      if (IsKeyPressed(KEY_S) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
+      {
+        fp = fopen(argv[1], "w");
+        fputs(text, fp);
+        fclose(fp);
+      }
+
       if (IsKeyPressed(KEY_J)) 
       { 
         lerpval = 0;
@@ -328,20 +366,22 @@ int main(int argc, char *argv[])
       { 
         lerpval = 0;
         textCursor.y++;
+        movedLeftOrRight = true;
       } 
       if (IsKeyPressed(KEY_H)) 
       { 
         lerpval = 0;
         textCursor.y--;
+        movedLeftOrRight = true;
       } 
       if (IsKeyDown(KEY_L)) 
       {
-        if (pressedCounter > speedTrigger) { if (frameCounter % delay == 0) textCursor.y++;}
+        if (pressedCounter > speedTrigger) { if (frameCounter % delay == 0) textCursor.y++; movedLeftOrRight = true;}
         else { pressedCounter += 1; }
       }
       if (IsKeyDown(KEY_H)) 
       { 
-        if (pressedCounter > speedTrigger) { if (frameCounter % delay == 0) textCursor.y--;}
+        if (pressedCounter > speedTrigger) { if (frameCounter % delay == 0) textCursor.y--;movedLeftOrRight = true;}
         else { pressedCounter += 1; }
       }
     
@@ -446,23 +486,49 @@ int main(int argc, char *argv[])
     }
     
     
-    if (textCursor.y < 1 && textCursor.x == 0) { textCursor.y = 1; }
-    else if (textCursor.y < 0) { textCursor.x--; textCursor.y = 1 + (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start); } 
+    if (textCursor.y < 0 && textCursor.x == 0) { textCursor.y = 0; }
+    else if (textCursor.y < 0) { textCursor.x--; textCursor.y = (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start); } 
     if (textCursor.x < 0) textCursor.x = 0;
-    if (textCursor.y > (1 + (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
+    
+    if (movedUpOrDown)
+    {
+      if (textCursor.y < past_biggest_y) textCursor.y = past_biggest_y;
+    }
+    
+    if (textCursor.y > ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
     { 
-      if (movedUpOrDown == 0)
+      if (!movedUpOrDown)
       {
         textCursor.x++;
-        textCursor.y = 1; //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
+        textCursor.y = 0; //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
       }
       else
       {
-        textCursor.y = (1 + (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)); //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
+        textCursor.y = ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)); //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
       }
     }
-    cursorTargetPos.x = textCursor.y * glphWidth;
-    cursorTargetPos.y = textCursor.x * lineHeight;
+
+    if (movedLeftOrRight)
+    {
+      past_biggest_y = textCursor.y;
+    }
+
+    cursorTargetPos.x = 11 + (textCursor.y * glphWidth);
+    cursorTargetPos.y = (textCursor.x - scrollOfset) * lineHeight;
+    if (textCursor.x >= upperHinge)
+    {
+      scrollOfset += 1;
+      upperHinge += 1;
+      lowerHinge += 1;
+    }
+    if (textCursor.x <= lowerHinge && textCursor.x > 5)
+    {
+      scrollOfset -= 1;
+      upperHinge -= 1;
+      lowerHinge -= 1;
+    }
+    
+    // if (scrollPos < 0) scrollPos = 0;
     
     
     // Draw
@@ -473,7 +539,7 @@ int main(int argc, char *argv[])
 
       BeginShaderMode(shader);
       int spacing = 0;
-      for (int i = 0; i<200; i++)
+      for (int i = scrollOfset; i<200 + scrollOfset; i++)
       {
         char regel[200] = {0};
         for (int j=lin[i].start; j<(lin[i].stop); j++)
@@ -524,3 +590,4 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+// That's it!

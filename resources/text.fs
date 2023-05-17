@@ -10,6 +10,9 @@ uniform vec4 colDiffuse;
 uniform vec2 cursorLoc;
 uniform float frameLoc;
 uniform int isMoving;
+uniform int screenWidth;
+uniform int screenHeight;
+
 
 // Output fragment color
 out vec4 finalColor;
@@ -23,7 +26,7 @@ void main()
 	// float v1 = abs(sin(frameLoc*1.5));
 	// float w1 = mix(0.7, 1.3, v1);
 	vec2 fragCoord = gl_FragCoord.xy;
-	vec2 position = vec2(cursorLoc.x, 990.0 - cursorLoc.y);
+	vec2 position = vec2(cursorLoc.x, (screenHeight) - cursorLoc.y);
 	float d = length(position - fragCoord) / 15.0;
 	// float t = clamp(d, 0.0, 1.0);
     // Texel color fetching from texture sampler
