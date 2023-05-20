@@ -7,3 +7,4 @@ Not really useable right now.
 #### Screenshots:
 
 <img src="screenshots/screen1.jpeg" width="300"/>
+<img src="screenshots/progress.PNG" width="300"/>
