@@ -2,7 +2,7 @@
 #include "./text.h"
 #include <stdlib.h>
 #include <math.h>
-#includ>
+#includ  hm
 #include <stdbool.h>
 #include <string.h>
 
@@ -23,7 +23,7 @@ float nLerp(float current, float target, float amount)
 {
   if (current < target)
   {
-    current += amount*(target - current);
+    current += amount * (target - current);
     if (current > target) { return target; } 
     return current;
   }
@@ -532,7 +532,7 @@ int main(int argc, char *argv[])
     
     
     // Draw
-    //----------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------
     BeginDrawing();
     {
       ClearBackground(backCol);
@@ -591,6 +591,26 @@ int main(int argc, char *argv[])
   return 0;
 }
 // That's it!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

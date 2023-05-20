@@ -1,2 +1,2 @@
 #!/bin/bash
-./build.sh text text.c
+./build.sh text test.txt
