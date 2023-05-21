@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "./text.h"
+#include "./interface.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -57,7 +58,7 @@ float approach(float current, float target, float amount)
 }
 
 
-line *lines(char *text, int *lineCounter)
+line *lines()
 {
   line *lines = calloc(10000, sizeof(line));
 
@@ -68,9 +69,9 @@ line *lines(char *text, int *lineCounter)
   int curStop = 0;
   while(c = text[pos], c != '\0'){
     if (c == '\n') { 
-      lines[*lineCounter].start = curStart;
-      lines[*lineCounter].stop = curStop;
-      *lineCounter = *lineCounter + 1;
+      lines[lineCounter].start = curStart;
+      lines[lineCounter].stop = curStop;
+      lineCounter = lineCounter + 1;
       curStart = curStop + 1;
     }
     pos++;
@@ -80,7 +81,7 @@ line *lines(char *text, int *lineCounter)
 }
 
 
-void add(char *text, char toInsert, int pos){
+void add(char toInsert, int pos){
   int textLength = strlen(text);
   if (appendMode == 0)
   {
@@ -102,7 +103,7 @@ void add(char *text, char toInsert, int pos){
 }
 
 
-void pop(char *text, int pos){
+void pop(int pos){
   int textLength = strlen(text);
   if (appendMode == 0)
   {
@@ -153,11 +154,9 @@ Vector2 posToCur(int position)
 }
 
 
-int handleText(char *text, Vector2 textCursor, int *lineCounter)
+int handleText(Vector2 textCursor)
 {
   if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start) appendMode = 0;
-  //printf("cursor in start handletext: %i, %i", (int)textCursor.x, (int)textCursor.y);
-  //printf("\n %i %i\n", lin[(int)textCursor.x].start, lin[(int)textCursor.x].stop);
   int position = curToPos(textCursor);
   static int key = 0;
   static int counter = 0;
@@ -179,7 +178,7 @@ int handleText(char *text, Vector2 textCursor, int *lineCounter)
     counter = 0;
   }
     
-  char * newText;
+  char *newText;
   if (key == 0) { return position; }
   if (key > 38 && key < 126) 
   { 
@@ -187,71 +186,68 @@ int handleText(char *text, Vector2 textCursor, int *lineCounter)
     { 
       if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT))
       {
-        add(text, (char)key, position);
+        add((char)key, position);
       }
       else
       {
         key += 32; 
-        add(text, (char)key, position);
+        add((char)key, position);
         key -=32;
       }
     }
     else
     {
-      add(text, (char)key, position);
+      add((char)key, position);
     }
     position++;
   }
   else if (key == 257) 
   { 
-    add(text, '\n', position); 
-    *lineCounter += 1;
+    add('\n', position); 
+    lineCounter += 1;
     position++;
   }
-  else if (key == 32) { add(text, ' ', position); position++; }
-  else if (key == 259 && position > 1) { pop(text, position); position--;}
+  else if (key == 32) { add(' ', position); position++; }
+  else if (key == 259 && position > 1) { pop(position); position--;}
   return position;
 }
 
-
-int toMove = 0;
-int appendMode = 0;
-line *lin;
-char *text;
-
-int main(int argc, char *argv[])
+Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOrRight, int past_biggest_y)
 {
-  // Initialization
-  //--------------------------------------------------------------------------------------
 
-  // TODO shader currently only works with screenHeight of 1000
-  bool closeAtEndOfLoop = false;
-  int screenWidth = 1000;
-  int screenHeight = 600;
-  InitWindow(screenWidth, screenHeight, "Editor - wip");
-  char *fontname_std = "resources/JetBrainsMono-Bold.ttf";
-  char *fontname_gut = "resources/iosevka-slab-light.ttf";
-  char *fontname_hl = "resources/JetBrainsMono-Bold.ttf";
-  Font myFont = LoadFontEx(fontname_std, 20, 0, 0);
-  Font gutterFont = LoadFontEx(fontname_gut, 20, 0, 0);
-  Font highlightFont = LoadFontEx(fontname_hl, 15, 0, 0);
-
-  SetTextureFilter(myFont.texture, TEXTURE_FILTER_TRILINEAR);
-  SetTextureFilter(highlightFont.texture, TEXTURE_FILTER_TRILINEAR);
+  if (textCursor.y < 0 && textCursor.x == 0) { textCursor.y = 0; }
+  else if (textCursor.y < 0) { textCursor.x--; textCursor.y = (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start); } 
+  if (textCursor.x < 0) textCursor.x = 0;
   
-  SetExitKey(KEY_LEFT_ALT);
-
-  int lineHeight = (int)(myFont.baseSize * 1.5f);
-  int glphWidth = (int)(myFont.recs[0].width + 2);
-  int hlGlphWidth = (int)(highlightFont.recs[0].width + 2);
-  // screenHeight = lineHeight * 30;
-  screenHeight = 600;
-  SetWindowSize(screenWidth, screenHeight);
-  SetWindowState(FLAG_WINDOW_UNDECORATED);
-  // SetWindowState(FLAG_WINDOW_RESIZABLE);
-  SetWindowPosition(500,200);
-  SetTargetFPS(100);               // Set our game to run at 60 frames-per-second
+  if (movedUpOrDown)
+  {
+    if (textCursor.y < past_biggest_y) textCursor.y = past_biggest_y;
+  }
   
+  if (textCursor.y > ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
+  { 
+    if (!movedUpOrDown)
+    {
+      textCursor.x++;
+      textCursor.y = 0; //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
+    }
+    else
+    {
+      textCursor.y = ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)); //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
+    }
+  }
+
+  if (movedLeftOrRight)
+  {
+    past_biggest_y = textCursor.y;
+  }
+
+  return textCursor;
+}
+
+
+FILE *initializeText(int argc, char *argv[])
+{
   FILE *fp;
   int bufSize = 100;
   int offset = 0;
@@ -273,133 +269,141 @@ int main(int argc, char *argv[])
     text[offset] = '\0';
   } else { puts("enter a file name please!"); exit(1); } 
 
-  int lineCounter = 0;
-  lin = lines(text, &lineCounter);
-  for (int i = 0; i < lineCounter; i++) 
-  {
-    //printf("start: %i, stop: %i\n", lin[i].start, lin[i].stop); 
-  }
-  //printf("\n\nsize of buffer: %i\nSize of offset: %i\nlinecounter= %i\n\n", bufSize, offset, lineCounter);
+  lin = lines();
+  return fp;
+}
 
-  // var init
+int toMove = 0;
+int appendMode = 0;
+line *lin;
+char *text;
+int lineCounter;
+
+int main(int argc, char *argv[])
+{
+  // Initialization
+  //--------------------------------------------------------------------------------------
+
+  int screenWidth = 1000;
+  int screenHeight = 600;
+  SetConfigFlags(FLAG_MSAA_4X_HINT);
+  InitWindow(screenWidth, screenHeight, "Editor - wip");
+  SetWindowState(FLAG_WINDOW_UNDECORATED);
+  SetWindowPosition(500,200);
+  SetTargetFPS(100);               // Set our game to run at 60 frames-per-second
+  SetExitKey(KEY_LEFT_ALT);
+
+  FILE *fp = initializeText(argc, argv);
+
+  int textSize = 20;
+  int hlTextSize = 15;
+  char *fontname_std = "resources/JetBrainsMono-Bold.ttf";
+  char *fontname_gut = "resources/iosevka-slab-light.ttf";
+  Font myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+  Font gutterFont = LoadFontEx(fontname_gut, 20, 0, 0);
+  Font highlightFont = LoadFontEx(fontname_std, hlTextSize, 0, 0);
+  SetTextureFilter(myFont.texture, TEXTURE_FILTER_TRILINEAR);
+  SetTextureFilter(highlightFont.texture, TEXTURE_FILTER_TRILINEAR);
+  
+  // old lineheight: int lineHeight = (int)(myFont.baseSize * 1.5f);
+  int lineHeightPadding = 2;
+  int lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
+  int glphWidth = (int)(myFont.recs[0].width);
+  int hlGlphWidth = (int)(highlightFont.recs[0].width);
+
+
+  // settings
   int leftGutterPadding = 5;  
   int gutterWidth = 30;
   int leftMargin = 4 * glphWidth + leftGutterPadding;
   int topMargin = 10;
   int gutterTopMargin = 30;
+  float cursorXMicroAdjust = -1;
+
+  Color edgeLight = (Color){200,200,200,200};
+  Color edgeDark = (Color){0,0,0,100};
+  Color cursorColor = { 20, 20, 250, 200 };
+  Color cursorInnerColor = { 20, 20, 20, 10 };
+  Color textCol = {20, 20, 50, 255};
+  Color shadowTextCol = {textCol.r, textCol.g, textCol.b, 60};
+  Color lineNumCol = {textCol.r, textCol.g, textCol.b, 180};
+  Color grad1 = {130,130,130, 255};
+  Color grad2 = {155, 138, 118, 255};
+  Color grad3 = {182, 147, 105, 255};
+
+  int speedTrigger = 20;
+  int delay = 3;
+  float lerptime = 0.1;
+  int resizeMargin = 20;
+  int lowerHinge = 5;
+  int upperHinge = 15;
+  int horHinge = 5;
+  int gutter_frag_size = 20;
+
+  //--------------------------------------------------------------------------------------
+  Texture2D gutterCollection[3];
+  createGutter(gutterCollection, "resources/gutter_long.png", "resources/gutter_dot.png", lineHeight, gutter_frag_size);
+  Texture2D gutter_mid_t = gutterCollection[0];
+  Texture2D gutter_top_t = gutterCollection[1];
+  Texture2D gutter_bot_t = gutterCollection[2];
+
+  Texture2D buttonCollection[4];
+  createButtons(buttonCollection, "resources/Bar.png", "resources/Groupcog.png",  "resources/Vectorminus.png",  "resources/Vectorcross.png");
+  Texture2D bar_t = buttonCollection[0];
+  Texture2D cog_t = buttonCollection[1];
+  Texture2D minus_t = buttonCollection[2];
+  Texture2D cross_t = buttonCollection[3];
+
+  Shader shader;
+
+  Vector2 textCursor = {0,0};
+  bool closeAtEndOfLoop = false;
+  Vector2 textPos = {gutterWidth + leftMargin, topMargin };
   Vector2 cursorPos = { 0, 0 };
   Vector2 cursorTargetPos = { 0, 0 };
-  Vector2 textPos = {gutterWidth + leftMargin, topMargin };
-  Vector2 textCursor = {0,0};
+  int past_biggest_y = 0;
+  int scrollOfset = 0;
+  int horOfset = 0;
+  bool isResizing = false;
   int pressedCounter = 0;
-  int speedTrigger = 20;
-  Color cursorColor = { 20, 20, 20, 100 };
-  Color cursorInnerColor = { 20, 20, 20, 10 };
-  Color cursorTrailColor = { 20, 20, 20, 50 };
-  // Color backCol = {198, 199, 185, 255};
-  Color backCol = {97, 113, 103, 255};
-  // Color textCol = {76, 71, 64, 255};
-  Color textCol = {20, 20, 50, 255};
-  Color lineNumCol = {textCol.r, textCol.g, textCol.b, 180};
   int frameCounter = 0;
   float lerpval = 0;
   bool lerping = false;
   int newPos = 0;
   int oldPos = 0;
-  int decoButtonWidth = 30;
-  int decoButtonHeight = 30;
   int cursorShape = 0;
   bool insertMode = 0;
-  int delay = 3;
-  float lerptime = 0.1;
-  bool isResizing = false;
-  int resizeMargin = 20;
-  int past_biggest_y = 0;
-  int scrollOfset = 0;
-  int horOfset = 0;
-  int lowerHinge = 5;
-  int upperHinge = 15;
-  int horHinge = 5;
-  int textSize = 20;
-  int oncog = 0;
-  int onminus = 0;
-  int oncross = 0;
-  int gutter_frag_size = 20;
-  int linesInScreen = screenHeight / lineHeight;
-  int gutterLength = screenHeight - 60;
-  Image gutter_mid = LoadImage("resources/gutter_long.png");
-  ImageCrop(&gutter_mid, (Rectangle){0,20,gutter_mid.width, lineHeight});
-  ImageResize(&gutter_mid, gutter_mid.width, gutter_frag_size);
-  Texture2D gutter_mid_t = LoadTextureFromImage(gutter_mid);
-
-
-  Image gutter_top = LoadImage("resources/gutter_dot.png");
-  ImageCrop(&gutter_top, (Rectangle){0,0,gutter_mid.width, 20});
-  Texture2D gutter_top_t = LoadTextureFromImage(gutter_top);
-  Image gutter_bot = LoadImage("resources/gutter_dot.png");
-  ImageCrop(&gutter_bot, (Rectangle){0,20,gutter_bot.width, (gutter_bot.height-20)});
-  Texture2D gutter_bot_t = LoadTextureFromImage(gutter_bot);
-  UnloadImage(gutter_top);
-  UnloadImage(gutter_bot);
-  Image butts = LoadImage("resources/butts.png");
-  Texture2D butts_t = LoadTextureFromImage(butts);
-
-  Image bar = LoadImage("resources/Bar.png");
-  Texture2D bar_t = LoadTextureFromImage(bar);
-  UnloadImage(bar);
-  Image cross = LoadImage("resources/Vectorcross.png");
-  Texture2D cross_t = LoadTextureFromImage(cross);
-  UnloadImage(cross);
-  Image minus = LoadImage("resources/Vectorminus.png");
-  Texture2D minus_t = LoadTextureFromImage(minus);
-  UnloadImage(minus);
-  Image cog = LoadImage("resources/Groupcog.png");
-  Texture2D cog_t = LoadTextureFromImage(cog);
-  UnloadImage(cog);
-
-  Shader shader = LoadShader(0, "resources/text.fs");
-  int frameLoc = GetShaderLocation(shader, "frameLoc");
-  SetShaderValue(shader, frameLoc, &frameCounter, SHADER_UNIFORM_FLOAT);
-  int cogLoc = GetShaderLocation(shader, "oncog");
-  SetShaderValue(shader, cogLoc, &oncog, SHADER_UNIFORM_INT);
-  int minusLoc = GetShaderLocation(shader, "onminus");
-  SetShaderValue(shader, minusLoc, &onminus, SHADER_UNIFORM_INT);
-  int crossLoc = GetShaderLocation(shader, "oncross");
-  SetShaderValue(shader, crossLoc, &oncross, SHADER_UNIFORM_INT);
-  int widthLoc = GetShaderLocation(shader, "screenWidth");
-  SetShaderValue(shader, widthLoc, &screenWidth, SHADER_UNIFORM_INT);
-
-  //--------------------------------------------------------------------------------------
 
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
   {
-    linesInScreen = screenHeight / lineHeight;
-    //printf("x: %f, y: %f\n", textCursor.x, textCursor.y);
-    frameCounter++;
-    float time = GetTime();
-    SetShaderValue(shader, frameLoc, &time, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(shader, cogLoc, &oncog, SHADER_UNIFORM_INT);
-    SetShaderValue(shader, minusLoc, &onminus, SHADER_UNIFORM_INT);
-    SetShaderValue(shader, crossLoc, &oncross, SHADER_UNIFORM_INT);
-    SetShaderValue(shader, widthLoc, &screenWidth, SHADER_UNIFORM_INT);
-
     SetWindowSize(screenWidth, screenHeight);
+    cursorColor.a = (int)(50 * (1.5 + sin((frameCounter / 15.0))));
     bool movedUpOrDown = false;
     bool movedLeftOrRight = false;
+
+    int oncog = 0;
+    int onminus = 0;
+    int oncross = 0;
+    frameCounter++;
+    float time = GetTime();
+
+
     if (!insertMode){
 
       if (IsKeyPressed(KEY_EQUAL)) 
       {
-
         textSize += 1;
+        hlTextSize += 1;
+        cursorXMicroAdjust -= 0.1;
         UnloadFont(myFont);
         UnloadFont(highlightFont);
         myFont = LoadFontEx(fontname_std, textSize, 0, 0);
-        highlightFont = LoadFontEx(fontname_hl, textSize-5, 0, 0);
-        lineHeight = (int)(myFont.baseSize * 1.5f);
-        hlGlphWidth = (int)(highlightFont.recs[0].width + 2);
-        glphWidth = (int)(myFont.recs[0].width + 2);
+        highlightFont = LoadFontEx(fontname_std, hlTextSize, 0, 0);
+
+        lineHeight = (int)( myFont.recs[0].height + lineHeightPadding);
+        glphWidth = (int)(myFont.recs[0].width);
+        hlGlphWidth = (int)(highlightFont.recs[0].width);
         leftMargin = (4 * glphWidth) + leftGutterPadding;
         textPos.x = gutterWidth + leftMargin;
       }
@@ -407,13 +411,17 @@ int main(int argc, char *argv[])
       if (IsKeyPressed(KEY_MINUS))
       {
         textSize -= 1;
+        hlTextSize -= 1;
+
+        if (cursorXMicroAdjust < 0) cursorXMicroAdjust += 0.1;
         UnloadFont(myFont);
         UnloadFont(highlightFont);
         myFont = LoadFontEx(fontname_std, textSize, 0, 0);
-        highlightFont = LoadFontEx(fontname_hl, textSize-5, 0, 0);
-        lineHeight = (int)(myFont.baseSize * 1.5f);
-        hlGlphWidth = (int)(highlightFont.recs[0].width + 2);
-        glphWidth = (int)(myFont.recs[0].width + 2);
+        highlightFont = LoadFontEx(fontname_std, hlTextSize, 0, 0);
+
+        lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
+        glphWidth = (int)(myFont.recs[0].width);
+        hlGlphWidth = (int)(highlightFont.recs[0].width);
         leftMargin = (4 * glphWidth) + leftGutterPadding;
         textPos.x = gutterWidth + leftMargin;
       }
@@ -504,10 +512,10 @@ int main(int argc, char *argv[])
       }
       else
       {
-        int newPos = handleText(text, textCursor, &lineCounter);
+        int newPos = handleText(textCursor);
         free(lin);
         lineCounter = 0;
-        lin = lines(text, &lineCounter);
+        lin = lines();
         textCursor = posToCur(newPos);
       }
     }
@@ -523,15 +531,13 @@ int main(int argc, char *argv[])
       lerpval = 0;
     }
 
-    cursorColor.a = (int)(50 * (1.5 + sin((frameCounter / 10.0))));
+    // Mouse actions
+
     Vector2 mposWhenPressedR;
     Vector2 mposWhenPressedL;
     Vector2 wposWhenPressed;
     Vector2 wsizeWhenPressed;
     int butXStart = (screenWidth - (bar_t.width+10));
-    oncog = 0;
-    onminus = 0;
-    oncross = 0;
     if (GetMouseX() > butXStart + 12 && GetMouseX() < butXStart + 12 + cog_t.width && GetMouseY() > 17 && GetMouseY() < 17 + cog_t.height)
     {
       oncog = 1;
@@ -545,6 +551,9 @@ int main(int argc, char *argv[])
       oncross = 1;
     }
 
+    // update shader
+    shader = initializeAndUpdateShader(time, oncog, onminus, oncross, screenWidth);
+
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON))
     {
       mposWhenPressedR = getFullMousePos();
@@ -556,7 +565,6 @@ int main(int argc, char *argv[])
       SetWindowPosition(wposWhenPressed.x + (getFullMousePos().x - mposWhenPressedR.x), wposWhenPressed.y + (getFullMousePos().y - mposWhenPressedR.y));
     }
     
-
     if (GetMouseX() > screenWidth - resizeMargin && GetMouseY() > screenHeight - resizeMargin)
     {
       SetMouseCursor(MOUSE_CURSOR_RESIZE_NWSE);
@@ -565,6 +573,7 @@ int main(int argc, char *argv[])
     {
       if (!isResizing) SetMouseCursor(MOUSE_CURSOR_DEFAULT);
     }
+
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
     {  
@@ -588,7 +597,7 @@ int main(int argc, char *argv[])
         closeAtEndOfLoop = true;
       }
     }
-    
+   
     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON))
     {
       if (isResizing) 
@@ -604,37 +613,14 @@ int main(int argc, char *argv[])
       SetMouseCursor(MOUSE_CURSOR_DEFAULT);
     }
     
-    
-    if (textCursor.y < 0 && textCursor.x == 0) { textCursor.y = 0; }
-    else if (textCursor.y < 0) { textCursor.x--; textCursor.y = (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start); } 
-    if (textCursor.x < 0) textCursor.x = 0;
-    
-    if (movedUpOrDown)
-    {
-      if (textCursor.y < past_biggest_y) textCursor.y = past_biggest_y;
-    }
-    
-    if (textCursor.y > ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
-    { 
-      if (!movedUpOrDown)
-      {
-        textCursor.x++;
-        textCursor.y = 0; //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
-      }
-      else
-      {
-        textCursor.y = ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)); //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
-      }
-    }
+    // textCursor handling    
+    textCursor = checkTextCursor(textCursor, movedUpOrDown, movedLeftOrRight, past_biggest_y);
 
-    if (movedLeftOrRight)
-    {
-      past_biggest_y = textCursor.y;
-    }
     int minWidth = (leftMargin + gutterWidth) + (20.9 * glphWidth);
     int minHeight = 10 + (10 * lineHeight);
     if (screenWidth < minWidth) screenWidth = minWidth;
     if (screenHeight < minHeight) screenHeight = minHeight;
+
     int amountOfLines = screenHeight / lineHeight;
     if (amountOfLines < 11)
     {
@@ -690,14 +676,6 @@ int main(int argc, char *argv[])
     //----------------------------------------------------------------------------------
     BeginDrawing();
     {
-      ClearBackground(backCol);
-      Color grad1 = {130,130,130, 255};
-      Color grad2 = {155, 138, 118, 255};
-      Color grad3 = {182, 147, 105, 255};
-      Color g1 = {61, 0, 0, 255};
-      Color g2 = {0, 0, 94, 255};
-      Color g3 = {0, 255, 0, 255};
-      Color g4 = {61, 160, 94, 255};
 
       DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad2, grad1,grad2,grad3);
       int amountOfGutterPieces = (screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) / gutter_mid_t.height;
@@ -709,7 +687,26 @@ int main(int argc, char *argv[])
         gutterSpacing += gutter_mid_t.height;
       }
       DrawTexture(gutter_bot_t, leftMargin, gutterSpacing, WHITE);
-      // BeginShaderMode(shader);
+      if (cursorShape == 0 && insertMode == 0)
+      {
+        Rectangle rec = {cursorPos.x, cursorPos.y, glphWidth, lineHeight};
+        DrawRectangleRounded(rec, 0.7, 5, cursorColor);
+      }
+      else
+      {
+        if (appendMode == 1)
+        {
+          DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
+          DrawRectangle(cursorPos.x + (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
+          DrawRectangle(cursorPos.x+glphWidth+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, cursorColor);
+        }
+        else 
+        {
+          DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
+          DrawRectangle(cursorPos.x - (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
+          DrawRectangle(cursorPos.x+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, cursorColor);
+        }
+      }
       int spacing = topMargin;
       for (int i = scrollOfset; i<amountOfLines + scrollOfset; i++)
       {
@@ -744,8 +741,6 @@ int main(int argc, char *argv[])
             shadowRegel[j-(regelEnd)] = text[j];
           }
         }
-        //// printf("%s\n", regel);
-        //// printf("start en stop: %i, %i\n", lin[i].start, lin[i].stop);
         textPos.y = spacing;
         char str[5];
         sprintf(str, "%4d", i);
@@ -761,35 +756,26 @@ int main(int argc, char *argv[])
         {
           DrawRectangle(textPos.x - 10, textPos.y, screenWidth - (gutterWidth + leftMargin) + 10, lineHeight, (Color){20,20,20,7});
         }
-        if (doShadowRegel) DrawTextEx(highlightFont, shadowRegel, (Vector2){textPos.x, textPos.y + (int)(lineHeight / 2)}, textSize - 5, 2, (Color){textCol.r, textCol.g, textCol.b, 80});
-        DrawTextEx(myFont, regel, textPos, textSize, 2, textCol);
+        if (doShadowRegel) DrawTextEx(highlightFont, shadowRegel, (Vector2){textPos.x, textPos.y + (int)((lineHeight + lineHeightPadding) / 2)}, hlTextSize, 2, shadowTextCol);
+        bool leadingSpace = true;
+        for (int j = 0; j < strlen(regel); j++){
+          if (regel[j] == ' ' && leadingSpace)
+          {
+            DrawLineEx((Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), textPos.y}, (Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), textPos.y + lineHeight}, 2, (Color){20,20,20,30});
+          }
+          else
+          {
+            leadingSpace = false;
+            DrawTextCodepoint(myFont, regel[j], (Vector2){textPos.x + (j * glphWidth), textPos.y}, textSize, textCol); 
+          }
+        }
         spacing += (lineHeight * 1);
-        // spacing += lineHeight;
       }
-      // EndShaderMode();
-      // DrawTextEx(myFont, text, textPos, 20, 2, textCol);
 
-      if (cursorShape == 0 && insertMode == 0)
-      {
-        Rectangle rec = {cursorPos.x-2, cursorPos.y - 2, glphWidth, lineHeight - 2};
-        DrawRectangleLinesEx(rec, 2.0f, cursorColor);
-      }
-      else
-      {
-        if (appendMode == 1)
-        {
-          DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
-          DrawRectangle(cursorPos.x - 2 + (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
-          DrawRectangle(cursorPos.x+8, cursorPos.y - 2, glphWidth / 4, lineHeight - 2, cursorColor);
-        }
-        else 
-        {
-          DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
-          DrawRectangle(cursorPos.x-2 - (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
-          DrawRectangle(cursorPos.x-3, cursorPos.y - 2, glphWidth / 4, lineHeight - 2, cursorColor);
-        }
-      }
+
+
       DrawTexture(bar_t, screenWidth - (bar_t.width + 10), 10,WHITE);
+
       BeginShaderMode(shader);
       {
         DrawTexture(cog_t, (screenWidth - (bar_t.width+10))+12, 17,WHITE);
@@ -798,11 +784,7 @@ int main(int argc, char *argv[])
       }
       EndShaderMode();
 
-      Color edgeLight = (Color){200,200,200,200};
-      Color edgeDark = (Color){0,0,0,100};
-      // DrawLineEx((Vector2){screenWidth-30,screenHeight},(Vector2){screenWidth,screenHeight-30},1, edgeDark);
-      // DrawLineEx((Vector2){screenWidth-30,screenHeight},(Vector2){screenWidth,screenHeight-30},1, edgeLight);
-      // DrawLineEx((Vector2){screenWidth-20,screenHeight},(Vector2){screenWidth,screenHeight-20},1, edgeDark);
+
       DrawLineEx((Vector2){screenWidth-10,screenHeight},(Vector2){screenWidth,screenHeight-10},3, edgeDark);
       DrawLineEx((Vector2){1,1},(Vector2){1,screenHeight},3, edgeLight);
       DrawLineEx((Vector2){1,1},(Vector2){screenWidth,1},3, edgeLight);
@@ -818,8 +800,13 @@ int main(int argc, char *argv[])
   // De-Initialization
   //--------------------------------------------------------------------------------------
   CloseWindow();        // Close window and OpenGL context
-  UnloadImage(gutter_mid);
   UnloadTexture(gutter_mid_t);
+  UnloadTexture(gutter_top_t);
+  UnloadTexture(gutter_bot_t);
+  UnloadTexture(bar_t);
+  UnloadTexture(cog_t);
+  UnloadTexture(minus_t);
+  UnloadTexture(cross_t);
   free(text);
   //--------------------------------------------------------------------------------------
 
