@@ -295,6 +295,9 @@ int main(int argc, char *argv[])
 
   FILE *fp = initializeText(argc, argv);
 
+  RenderTexture2D tex;
+  tex = LoadRenderTexture(screenWidth, screenHeight);
+  while(!IsRenderTextureReady(tex));
   int textSize = 20;
   int hlTextSize = 15;
   char *fontname_std = "resources/JetBrainsMono-Bold.ttf";
@@ -355,6 +358,7 @@ int main(int argc, char *argv[])
   Texture2D cross_t = buttonCollection[3];
 
   Shader shader;
+  Shader shaderBlur;
 
   Vector2 textCursor = {0,0};
   bool closeAtEndOfLoop = false;
@@ -373,6 +377,8 @@ int main(int argc, char *argv[])
   int oldPos = 0;
   int cursorShape = 0;
   bool insertMode = 0;
+  int shouldBlur = 0;
+  bool cogging = 0;
 
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -381,14 +387,13 @@ int main(int argc, char *argv[])
     cursorColor.a = (int)(50 * (1.5 + sin((frameCounter / 15.0))));
     bool movedUpOrDown = false;
     bool movedLeftOrRight = false;
-
     int oncog = 0;
     int onminus = 0;
     int oncross = 0;
     frameCounter++;
     float time = GetTime();
 
-
+    if (!cogging) {
     if (!insertMode){
 
       if (IsKeyPressed(KEY_EQUAL)) 
@@ -530,6 +535,7 @@ int main(int argc, char *argv[])
     {
       lerpval = 0;
     }
+    }
 
     // Mouse actions
 
@@ -587,6 +593,16 @@ int main(int argc, char *argv[])
       {
         // TODO
         printf("COG");
+        if (cogging)
+        {
+          shouldBlur = 0;
+          cogging = false;
+        } 
+        else 
+        {
+          shouldBlur = 1;
+          cogging = true; 
+        }
       }
       else if (onminus == 1)
       {
@@ -611,6 +627,9 @@ int main(int argc, char *argv[])
     {
       isResizing = false;
       SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+      UnloadRenderTexture(tex);
+      tex = LoadRenderTexture(screenWidth, screenHeight);
+      while(!IsRenderTextureReady(tex));
     }
     
     // textCursor handling    
@@ -668,6 +687,7 @@ int main(int argc, char *argv[])
         }
       }
     }
+    shaderBlur = initializeAndUpdateShaderBlur(shouldBlur, screenWidth, screenHeight);
     
     // if (scrollPos < 0) scrollPos = 0;
     
@@ -676,7 +696,10 @@ int main(int argc, char *argv[])
     //----------------------------------------------------------------------------------
     BeginDrawing();
     {
-
+      if (!isResizing && cogging){
+      BeginTextureMode(tex);
+      }
+  
       DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad2, grad1,grad2,grad3);
       int amountOfGutterPieces = (screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) / gutter_mid_t.height;
       int gutterSpacing = gutterTopMargin + gutter_top_t.height;
@@ -771,6 +794,24 @@ int main(int argc, char *argv[])
         }
         spacing += (lineHeight * 1);
       }
+      if (!isResizing && cogging){
+        EndTextureMode();
+        while(!IsTextureReady(tex.texture));
+        BeginShaderMode(shaderBlur);
+        DrawTexturePro(tex.texture, (Rectangle){0,0,-screenWidth, screenHeight}, (Rectangle){0,0,screenWidth, screenHeight}, (Vector2){screenWidth,screenHeight}, 180, WHITE);
+        EndShaderMode();
+        int hw = screenWidth / 2.0;
+        int hh = screenHeight / 2.0;
+        DrawRectangleRec((Rectangle){0, 0, screenWidth, screenHeight}, (Color){150,150,255,40});
+        char *settingText = "Press ^c to generate a config.txt"
+                            "\n^s - save"
+                            "\nhjkl - move around."
+                            "\ni - insert mode."
+                            "\nesc - back to normal mode."
+                            "\no - new line";
+        DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16), hh-(lineHeight*4)},textSize,0,textCol);
+      }
+      // DrawTextureEx(tex.texture, (Vector2){0,0}, 20,1, WHITE);
 
 
 
@@ -800,6 +841,8 @@ int main(int argc, char *argv[])
   // De-Initialization
   //--------------------------------------------------------------------------------------
   CloseWindow();        // Close window and OpenGL context
+  UnloadTexture(tex.texture);
+  UnloadRenderTexture(tex);
   UnloadTexture(gutter_mid_t);
   UnloadTexture(gutter_top_t);
   UnloadTexture(gutter_bot_t);

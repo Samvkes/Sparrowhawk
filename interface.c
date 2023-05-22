@@ -75,3 +75,24 @@ Shader initializeAndUpdateShader(float time, int oncog, int onminus, int oncross
 	return shader;
 }
 
+Shader initializeAndUpdateShaderBlur(int shouldBlur, int screenWidth, int screenHeight)
+{
+	static Shader shader;
+	static int shouldBlurLoc;
+	static bool isInit = false;
+	static int widthLoc;
+	static int heightLoc;
+	if (!isInit)
+	{
+	  shader = LoadShader(0, "resources/blur.fs");
+	  shouldBlurLoc = GetShaderLocation(shader, "shouldBlur");
+	  widthLoc = GetShaderLocation(shader, "screenWidth");
+	  heightLoc = GetShaderLocation(shader, "screenHeight");
+		isInit = true;
+	}
+  SetShaderValue(shader, shouldBlurLoc, &shouldBlur, SHADER_UNIFORM_INT);
+  SetShaderValue(shader, widthLoc, &screenWidth, SHADER_UNIFORM_INT);
+  SetShaderValue(shader, heightLoc, &screenHeight, SHADER_UNIFORM_INT);
+	return shader;
+}
+
