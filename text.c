@@ -296,7 +296,16 @@ int main(int argc, char *argv[])
   FILE *fp = initializeText(argc, argv);
 
   RenderTexture2D tex;
+  RenderTexture2D tex2;
+  RenderTexture2D cursorTex;
+  RenderTexture2D cursorTex2;
+  RenderTexture2D cleanTex;
+  Image cleanIm = GenImageColor(100,100,(Color){0,0,0,0});
   tex = LoadRenderTexture(screenWidth, screenHeight);
+  tex2 = LoadRenderTexture(screenWidth, screenHeight);
+  cursorTex = LoadRenderTexture(100,100);
+  cursorTex2 = LoadRenderTexture(100,100);
+  cleanTex = LoadRenderTexture(100,100);
   while(!IsRenderTextureReady(tex));
   int textSize = 20;
   int hlTextSize = 15;
@@ -365,6 +374,12 @@ int main(int argc, char *argv[])
   Vector2 textPos = {gutterWidth + leftMargin, topMargin };
   Vector2 cursorPos = { 0, 0 };
   Vector2 cursorTargetPos = { 0, 0 };
+  int trailAmount = 15;
+  Vector2 pastCursorPos[trailAmount];
+  for (int i = 0; i<trailAmount; i++)
+  {
+    pastCursorPos[i] = (Vector2){0,0};
+  }
   int past_biggest_y = 0;
   int scrollOfset = 0;
   int horOfset = 0;
@@ -429,6 +444,7 @@ int main(int argc, char *argv[])
         hlGlphWidth = (int)(highlightFont.recs[0].width);
         leftMargin = (4 * glphWidth) + leftGutterPadding;
         textPos.x = gutterWidth + leftMargin;
+
       }
 
       if (IsKeyPressed(KEY_S) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
@@ -629,7 +645,8 @@ int main(int argc, char *argv[])
       SetMouseCursor(MOUSE_CURSOR_DEFAULT);
       UnloadRenderTexture(tex);
       tex = LoadRenderTexture(screenWidth, screenHeight);
-      while(!IsRenderTextureReady(tex));
+      UnloadRenderTexture(tex2);
+      tex2 = LoadRenderTexture(screenWidth, screenHeight);
     }
     
     // textCursor handling    
@@ -710,24 +727,44 @@ int main(int argc, char *argv[])
         gutterSpacing += gutter_mid_t.height;
       }
       DrawTexture(gutter_bot_t, leftMargin, gutterSpacing, WHITE);
+      
+      // cursor drawing
       if (cursorShape == 0 && insertMode == 0)
       {
         Rectangle rec = {cursorPos.x, cursorPos.y, glphWidth, lineHeight};
         DrawRectangleRounded(rec, 0.7, 5, cursorColor);
+        for (int i = 0; i<30; i++)
+        {
+          Rectangle rec = {pastCursorPos[i].x, pastCursorPos[i].y, glphWidth, lineHeight};
+          DrawRectangleRounded(rec, 0.7, 5, (Color){cursorColor.r+60, cursorColor.g, cursorColor.b, 2});
+        }
+
       }
       else
       {
         if (appendMode == 1)
         {
-          DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
-          DrawRectangle(cursorPos.x + (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
-          DrawRectangle(cursorPos.x+glphWidth+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, cursorColor);
+          // DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
+          // DrawRectangle(cursorPos.x + (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
+          DrawRectangle(cursorPos.x+glphWidth+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, (Color){cursorColor.r, cursorColor.g, cursorColor.b, cursorColor.a+60});
+        }
+        else if (insertMode == 1)
+        {
+          // DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
+          // DrawRectangle(cursorPos.x - (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
+          DrawRectangle(cursorPos.x+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, (Color){cursorColor.r, cursorColor.g, cursorColor.b, cursorColor.a+60});
         }
         else 
         {
           DrawRectangle(0, cursorPos.y - 2, screenWidth, lineHeight - 2, cursorInnerColor); 
-          DrawRectangle(cursorPos.x - (int)(glphWidth / 2), 0, glphWidth, screenHeight, cursorInnerColor); 
-          DrawRectangle(cursorPos.x+cursorXMicroAdjust, cursorPos.y, glphWidth / 2.5, lineHeight, cursorColor);
+          DrawRectangle(cursorPos.x, 0, glphWidth, screenHeight, cursorInnerColor); 
+          Rectangle rec = {cursorPos.x, cursorPos.y, glphWidth, lineHeight};
+          DrawRectangleRounded(rec, 0.7, 5, (Color){cursorColor.r, cursorColor.g, cursorColor.b, 155});
+          for (int i = 0; i<trailAmount; i++)
+          {
+            Rectangle rec = {pastCursorPos[i].x, pastCursorPos[i].y, glphWidth, lineHeight};
+            DrawRectangleRounded(rec, 0.7, 5, (Color){cursorColor.r, cursorColor.g, cursorColor.b, 4});
+          }
         }
       }
       int spacing = topMargin;
@@ -790,6 +827,7 @@ int main(int argc, char *argv[])
           {
             leadingSpace = false;
             DrawTextCodepoint(myFont, regel[j], (Vector2){textPos.x + (j * glphWidth), textPos.y}, textSize, textCol); 
+
           }
         }
         spacing += (lineHeight * 1);
@@ -797,8 +835,13 @@ int main(int argc, char *argv[])
       if (!isResizing && cogging){
         EndTextureMode();
         while(!IsTextureReady(tex.texture));
+        BeginTextureMode(tex2);
         BeginShaderMode(shaderBlur);
         DrawTexturePro(tex.texture, (Rectangle){0,0,-screenWidth, screenHeight}, (Rectangle){0,0,screenWidth, screenHeight}, (Vector2){screenWidth,screenHeight}, 180, WHITE);
+        EndShaderMode();
+        EndTextureMode();
+        BeginShaderMode(shaderBlur);
+        DrawTexturePro(tex2.texture, (Rectangle){0,0,-screenWidth, screenHeight}, (Rectangle){0,0,screenWidth, screenHeight}, (Vector2){screenWidth,screenHeight}, 180, WHITE);
         EndShaderMode();
         int hw = screenWidth / 2.0;
         int hh = screenHeight / 2.0;
@@ -809,6 +852,7 @@ int main(int argc, char *argv[])
                             "\ni - insert mode."
                             "\nesc - back to normal mode."
                             "\no - new line";
+        DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16)+1, hh-(lineHeight*4)+1},textSize,0,(Color){200,200,200,150});
         DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16), hh-(lineHeight*4)},textSize,0,textCol);
       }
       // DrawTextureEx(tex.texture, (Vector2){0,0}, 20,1, WHITE);
@@ -833,6 +877,8 @@ int main(int argc, char *argv[])
       DrawLineEx((Vector2){1,screenHeight},(Vector2){screenWidth,screenHeight},3, edgeDark);
       
     }
+
+    pastCursorPos[frameCounter%trailAmount] = cursorPos;
     EndDrawing();
     //----------------------------------------------------------------------------------
     if (closeAtEndOfLoop) break;

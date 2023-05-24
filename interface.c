@@ -96,3 +96,24 @@ Shader initializeAndUpdateShaderBlur(int shouldBlur, int screenWidth, int screen
 	return shader;
 }
 
+Shader initializeAndUpdateShaderBloom(int screenWidth, int screenHeight, Color cursorColor)
+{
+	static Shader shader;
+	static bool isInit = false;
+	static int widthLoc;
+	static int heightLoc;
+	static int ccLoc;
+	if (!isInit)
+	{
+	  shader = LoadShader(0, "resources/bloom.fs");
+	  widthLoc = GetShaderLocation(shader, "screenWidth");
+	  heightLoc = GetShaderLocation(shader, "screenHeight");
+	  ccLoc = GetShaderLocation(shader, "cursorColor");
+		isInit = true;
+	}
+  SetShaderValue(shader, widthLoc, &screenWidth, SHADER_UNIFORM_INT);
+  SetShaderValue(shader, heightLoc, &screenHeight, SHADER_UNIFORM_INT);
+  SetShaderValue(shader, ccLoc, &cursorColor, SHADER_UNIFORM_VEC4);
+	return shader;
+}
+

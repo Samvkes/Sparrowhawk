@@ -13,5 +13,6 @@ extern void createGutter(Texture2D gutterCollection[3], char *gutterpng, char *g
 extern void createButtons(Texture2D buttonCollection[4], char *buttonCogBar, char *buttonCogPng, char *buttonMinusPng, char *buttonCrossPng);
 extern Shader initializeAndUpdateShader(float time, int oncog, int onminus, int oncross, int screenWidth);
 extern Shader initializeAndUpdateShaderBlur(int shouldBlur, int screenWidth, int screenHeight);
+extern Shader initializeAndUpdateShaderBloom(int screenWidth, int screenHeight, Color cursorColor);
 
 #endif

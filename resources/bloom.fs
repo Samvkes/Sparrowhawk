@@ -7,7 +7,7 @@ in vec4 fragColor;
 // Input uniform values
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
-uniform int shouldBlur;
+uniform vec4 cursorColor;
 uniform int screenWidth;
 uniform int screenHeight;
 
@@ -18,26 +18,25 @@ out vec4 finalColor;
 
 void main()
 {
-	vec2 texSize = vec2(screenWidth,screenHeight);
-	int size = 4;
+	vec2 texSize = vec2(-100,-100);
+	int size = 7;
+	vec4 aa = vec4(255);
 	vec2 fragCoord = gl_FragCoord.xy;
     // Texel color fetching from texture sampler
 	vec4 fcol = vec4(0);
 	vec4 texelColor = texture(texture0, fragTexCoord);
 	for (int i = -size; i<= size; ++i) {
 		for (int j = -size; j<=size; ++j) {
-		    fcol += texture(texture0, (gl_FragCoord.xy + vec2(i,j))/texSize);
+		    fcol += texture(texture0, (fragTexCoord + (vec2(i,j)/texSize)));
 		}
 	}
 	fcol /= ((size *2 + 1) * (size *2 + 1));
+	fcol += (0.1)*fcol;
+	fcol.b = 1;
+	// fcol.r = 0.5;
+	// texelColor += fcol;
     // Calculate final fragment color
-	if (shouldBlur == 1)
-	{
-		finalColor = fcol;
-	}
-	else 
-	{
-		finalColor = texelColor;
-	}
+	// if (fcol.a > texelColor.a) fcol.a = texelColor.a;
+	finalColor = fcol;
 	
 }
