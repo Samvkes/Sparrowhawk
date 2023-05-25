@@ -122,11 +122,14 @@ int main(int argc, char *argv[])
   bool lerping = false;
   int shouldBlur = 0;
   bool cogging = 0;
+  bool peekMode = false;
   int uph;
   int downh;
   float closeLerpVal = 0;
   float minLerpVal = 0;
   float minOpa = 1;
+  int peekOffset = 0;
+  int peekFileLength = 0;
 
   struct stat fs;
   char * fileList[500];
@@ -196,18 +199,41 @@ int main(int argc, char *argv[])
       }
       
       // file actions
+      if (IsKeyPressed(KEY_SPACE))
+      {
+        peekOffset = 0;
+        peekMode = !peekMode;
+      }
+
       if (IsKeyPressed(KEY_J))
       {
-        fileSelection++;
-        if (fileSelection > currentDirSize-1) fileSelection = 0;
+        if (!peekMode)
+        {
+          fileSelection++;
+          if (fileSelection > currentDirSize-1) fileSelection = 0;
+        }
       }
 
       if (IsKeyPressed(KEY_K))
       {
-        fileSelection--;
-        if (fileSelection < 0) fileSelection = currentDirSize-1;
+        if (!peekMode)
+        {
+          fileSelection--;
+          if (fileSelection < 0) fileSelection = currentDirSize-1;
+        }
+      }
+      
+      if (IsKeyDown(KEY_K))
+      {
+        if (peekOffset > 0 && peekMode) peekOffset -= 1;  
       }
 
+      if (IsKeyDown(KEY_J))
+      {
+        if (peekOffset < peekFileLength - (screenHeight / lineHeight) + 2 && peekMode) peekOffset += 1;  
+      }
+      
+      
       if (IsKeyPressed(KEY_L))
       {
         int r = stat(fileList[fileSelection], &fs);
@@ -382,8 +408,8 @@ int main(int argc, char *argv[])
       DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad2, grad1,grad2,grad3);
       int spacing = 0;
       fileCounter = 0;
+      Color peekCol = {0,0,0,30};
       // drawing files
-      
       while (fileCounter < currentDirSize)
       {
         printf("%s\n", fileList[fileCounter]);
@@ -399,15 +425,36 @@ int main(int argc, char *argv[])
             char fileHead[1024];
             while (fgets(fileHead, sizeof(fileHead),fp) != NULL && headSpacing / lineHeight < 200)
             {
-              DrawTextEx(myFont, fileHead, (Vector2){10,headSpacing},textSize,0,(Color){0,0,0,60});
+              peekFileLength = headSpacing / lineHeight;
+              if (peekFileLength == 199) strcpy(fileHead, "\t\t\t\t\tTHE FILE CONTINUES FURTHER...");
+              if (peekMode) peekCol.a = 200;
+              DrawTextEx(myFont, fileHead, (Vector2){10,headSpacing - (peekOffset *lineHeight)},textSize,0,peekCol);
               headSpacing += lineHeight;
             }
             fclose(fp);
           }
 
-
-          sprintf(str, "%-30s - %s   - size: %lu bytes", fileList[fileCounter], "type: Regular", fs.st_size);
-          DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, WHITE);
+          if (!peekMode)
+          {
+            sprintf(str, "%s", fileList[fileCounter]);
+            char toTokenize[200];
+            strcpy(toTokenize, str);
+            char * match;
+            char oldmatch[100];
+            match = strtok(toTokenize, ".");
+            while (match)
+            {
+              strcpy(oldmatch, match);
+              match = strtok(NULL, "."); 
+            }
+            int seedVal = 0;
+            for (int i = 0; i<strlen(oldmatch); i++) seedVal += (int)oldmatch[i]*(int)oldmatch[i];
+            SetRandomSeed(seedVal);
+            Color fileCol = {GetRandomValue(0,255),GetRandomValue(0,255),GetRandomValue(0,255),100};
+            DrawRectangle(200, 100+spacing, strlen(str) * glphWidth, lineHeight, fileCol);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + 1}, textSize, 0, BLACK);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, WHITE);
+          }
         }
         else if (S_ISDIR(fs.st_mode))
         { 
@@ -418,21 +465,39 @@ int main(int argc, char *argv[])
             struct dirent *dirEntry;
             while ((dirEntry = readdir(dp)) != NULL)
             {
-              DrawTextEx(myFont, dirEntry->d_name, (Vector2){10,headSpacing},textSize,0,(Color){0,0,0,60});
+              if (peekMode) peekCol.a = 200;
+              DrawTextEx(myFont, dirEntry->d_name, (Vector2){10,headSpacing},textSize,0,peekCol);
               headSpacing += lineHeight;
             }
             closedir(dp);
           }
-
-          sprintf(str, "%-30s - type: Directory - size: %lu bytes", fileList[fileCounter], fs.st_size);
-          DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, RED);
+          if (!peekMode)
+          {
+            sprintf(str, "\\%s", fileList[fileCounter]);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, BLACK);
+          }
         }
-        if (fileCounter == fileSelection)
+        if (fileCounter == fileSelection && !peekMode)
         {
-          DrawRectangle(200, 100+spacing, glphWidth*strlen(str), lineHeight, (Color){100,100,250,150}); 
+          // DrawRectangleRounded((Rectangle){200-glphWidth, 100+spacing, glphWidth*(2+strlen(str)), lineHeight},20,5,(Color){100,100,250,30}); 
+          DrawRectangleRounded((Rectangle){200-glphWidth, 100+spacing, glphWidth*(2+strlen(str)), lineHeight},20,5,(Color){100,100,250,255}); 
+          DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, WHITE);
+          // DrawCircle(199+((1+strlen(str))*glphWidth), 99+spacing+(lineHeight / 2.0), 4, WHITE);
+          // DrawCircle(201+((1+strlen(str))*glphWidth), 101+spacing+(lineHeight / 2.0), 4, DARKBLUE);
+          // DrawCircle(200+((1+strlen(str))*glphWidth), 100+spacing+(lineHeight / 2.0), 4, BLUE);
+          // DrawCircle(199-glphWidth, 99+spacing+(lineHeight / 2.0), 4, WHITE);
+          // DrawCircle(201-glphWidth, 101+spacing+(lineHeight / 2.0), 4, DARKBLUE);
+          // DrawCircle(200-glphWidth, 100+spacing+(lineHeight / 2.0), 4, BLUE);
         }
         spacing += lineHeight;
         fileCounter++;
+      }
+      if(!peekMode)
+      {
+        char cwdBuf[300];
+        getcwd(cwdBuf, 300);
+        DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth,lineHeight},20,5,BLUE);
+        DrawTextEx(myFont, cwdBuf, (Vector2){20, screenHeight - (lineHeight+10)}, textSize, 0, BLACK);
       }
 
       // file drawing
