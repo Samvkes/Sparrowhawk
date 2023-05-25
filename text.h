@@ -12,6 +12,7 @@ extern line *lin;
 extern char *text;
 extern int lineCounter;
 extern int appendMode;
+extern char * charTable[];
 
 Vector2 GetFullMousePos();
 float nLerp(float current, float target, float amount);

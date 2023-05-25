@@ -19,7 +19,7 @@ out vec4 finalColor;
 void main()
 {
 	vec2 texSize = vec2(screenWidth,screenHeight);
-	int size = 4;
+	int size = 5;
 	vec2 fragCoord = gl_FragCoord.xy;
     // Texel color fetching from texture sampler
 	vec4 fcol = vec4(0);

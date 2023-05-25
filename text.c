@@ -180,24 +180,17 @@ int handleText(Vector2 textCursor)
     
   char *newText;
   if (key == 0) { return position; }
-  if (key > 38 && key < 126) 
+  if (key > 32 && key < 126) 
   { 
-    if (key > 64 )
-    { 
-      if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT))
-      {
-        add((char)key, position);
-      }
-      else
-      {
-        key += 32; 
-        add((char)key, position);
-        key -=32;
-      }
+    if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT))
+    {
+      add(charTable[1][key-39], position);
     }
     else
     {
-      add((char)key, position);
+      // key += 32; 
+      add(charTable[0][key-39], position);
+      // key -=32;
     }
     position++;
   }
@@ -278,6 +271,7 @@ int appendMode = 0;
 line *lin;
 char *text;
 int lineCounter;
+char * charTable[] = {"'8888,-./01234567898;8=888abcdefghijklmnopqrstuvwxyz[\\]88`", "\"8888<_>?)!@#$%^&*(8:8+888ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}88~"};
 
 int main(int argc, char *argv[])
 {
@@ -297,15 +291,8 @@ int main(int argc, char *argv[])
 
   RenderTexture2D tex;
   RenderTexture2D tex2;
-  RenderTexture2D cursorTex;
-  RenderTexture2D cursorTex2;
-  RenderTexture2D cleanTex;
-  Image cleanIm = GenImageColor(100,100,(Color){0,0,0,0});
   tex = LoadRenderTexture(screenWidth, screenHeight);
   tex2 = LoadRenderTexture(screenWidth, screenHeight);
-  cursorTex = LoadRenderTexture(100,100);
-  cursorTex2 = LoadRenderTexture(100,100);
-  cleanTex = LoadRenderTexture(100,100);
   while(!IsRenderTextureReady(tex));
   int textSize = 20;
   int hlTextSize = 15;
@@ -370,7 +357,8 @@ int main(int argc, char *argv[])
   Shader shaderBlur;
 
   Vector2 textCursor = {0,0};
-  bool closeAtEndOfLoop = false;
+  int closeAtEndOfLoop = 0;
+  int minimizeAtEndOfLoop = 0;
   Vector2 textPos = {gutterWidth + leftMargin, topMargin };
   Vector2 cursorPos = { 0, 0 };
   Vector2 cursorTargetPos = { 0, 0 };
@@ -394,6 +382,11 @@ int main(int argc, char *argv[])
   bool insertMode = 0;
   int shouldBlur = 0;
   bool cogging = 0;
+  int uph;
+  int downh;
+  float closeLerpVal = 0;
+  float minLerpVal = 0;
+  float minOpa = 1;
 
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -622,11 +615,15 @@ int main(int argc, char *argv[])
       }
       else if (onminus == 1)
       {
-        SetWindowState(FLAG_WINDOW_MINIMIZED); 
+        minimizeAtEndOfLoop = 1;
+        minLerpVal = 0;
+        minOpa = 1;
       }
       else if (oncross == 1)
       {
-        closeAtEndOfLoop = true;
+        uph = -screenHeight;
+        downh = screenHeight;
+        closeAtEndOfLoop = 1;
       }
     }
    
@@ -653,7 +650,9 @@ int main(int argc, char *argv[])
     textCursor = checkTextCursor(textCursor, movedUpOrDown, movedLeftOrRight, past_biggest_y);
 
     int minWidth = (leftMargin + gutterWidth) + (20.9 * glphWidth);
-    int minHeight = 10 + (10 * lineHeight);
+    int minHeight;
+    if (closeAtEndOfLoop > 0) minHeight = 1;
+    else minHeight = 10 + (10 * lineHeight);
     if (screenWidth < minWidth) screenWidth = minWidth;
     if (screenHeight < minHeight) screenHeight = minHeight;
 
@@ -733,11 +732,6 @@ int main(int argc, char *argv[])
       {
         Rectangle rec = {cursorPos.x, cursorPos.y, glphWidth, lineHeight};
         DrawRectangleRounded(rec, 0.7, 5, cursorColor);
-        for (int i = 0; i<30; i++)
-        {
-          Rectangle rec = {pastCursorPos[i].x, pastCursorPos[i].y, glphWidth, lineHeight};
-          DrawRectangleRounded(rec, 0.7, 5, (Color){cursorColor.r+60, cursorColor.g, cursorColor.b, 2});
-        }
 
       }
       else
@@ -853,7 +847,8 @@ int main(int argc, char *argv[])
                             "\nesc - back to normal mode."
                             "\no - new line";
         DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16)+1, hh-(lineHeight*4)+1},textSize,0,(Color){200,200,200,150});
-        DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16), hh-(lineHeight*4)},textSize,0,textCol);
+        DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16)-1, hh-(lineHeight*4)-1},textSize,0,(Color){0,0,0,250});
+        DrawTextEx(myFont, settingText, (Vector2){hw-(glphWidth * 16), hh-(lineHeight*4)},textSize,0,(Color){120,80,80,250});
       }
       // DrawTextureEx(tex.texture, (Vector2){0,0}, 20,1, WHITE);
 
@@ -879,9 +874,38 @@ int main(int argc, char *argv[])
     }
 
     pastCursorPos[frameCounter%trailAmount] = cursorPos;
+    if (minimizeAtEndOfLoop > 0) 
+    {
+      if (minimizeAtEndOfLoop > 20){
+        minimizeAtEndOfLoop = 0;
+        SetWindowState(FLAG_WINDOW_MINIMIZED); 
+      }
+      else
+      {
+        minimizeAtEndOfLoop++; 
+        
+        minLerpVal += 1/25.0;
+        minOpa = nLerp(minOpa, 0, minLerpVal);
+        SetWindowOpacity(minOpa);
+      }
+    }
+    else SetWindowOpacity(1);
+    if (closeAtEndOfLoop > 0) 
+    {
+      if (closeAtEndOfLoop > 20) break;
+      else
+      {
+        closeAtEndOfLoop++; 
+        
+        closeLerpVal += 1/25.0;
+        uph = nLerp(uph, -(screenHeight / 2.0), closeLerpVal);
+        downh = nLerp(downh, screenHeight / 2.0, closeLerpVal);
+        DrawRectangle(0,uph,screenWidth, screenHeight, BLACK);
+        DrawRectangle(0,downh, screenWidth, screenHeight, BLACK);
+      }
+    }
     EndDrawing();
     //----------------------------------------------------------------------------------
-    if (closeAtEndOfLoop) break;
   }
 
   // De-Initialization
@@ -889,6 +913,7 @@ int main(int argc, char *argv[])
   CloseWindow();        // Close window and OpenGL context
   UnloadTexture(tex.texture);
   UnloadRenderTexture(tex);
+  UnloadRenderTexture(tex2);
   UnloadTexture(gutter_mid_t);
   UnloadTexture(gutter_top_t);
   UnloadTexture(gutter_bot_t);
