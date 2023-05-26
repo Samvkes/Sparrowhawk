@@ -1,2 +1,2 @@
 #!/bin/bash
-./build.sh file
+./build.sh main

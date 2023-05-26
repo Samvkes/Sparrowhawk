@@ -100,6 +100,8 @@ int main(int argc, char *argv[])
   int fileSelection = 0;
   DIR *currentDir;
   int currentDirSize=0;
+  int lowerHinge = 5;
+  int upperHinge = 15;
 
   //--------------------------------------------------------------------------------------
 
@@ -117,6 +119,11 @@ int main(int argc, char *argv[])
   int closeAtEndOfLoop = 0;
   int minimizeAtEndOfLoop = 0;
   bool isResizing = false;
+  int scrollOfset = 0;
+  int selectOffset = 0;
+  int oldScrollOffset = 0;
+  int oldSelectOffset = 0;
+  int oldSelection = 0;
   int frameCounter = 0;
   float lerpval = 0;
   bool lerping = false;
@@ -209,8 +216,13 @@ int main(int argc, char *argv[])
       {
         if (!peekMode)
         {
+          scrollOfset--;
           fileSelection++;
-          if (fileSelection > currentDirSize-1) fileSelection = 0;
+          if (fileSelection > currentDirSize-1) 
+          {
+            fileSelection = 0;
+            scrollOfset = 0;
+          }
         }
       }
 
@@ -218,8 +230,13 @@ int main(int argc, char *argv[])
       {
         if (!peekMode)
         {
+          scrollOfset++;
           fileSelection--;
-          if (fileSelection < 0) fileSelection = currentDirSize-1;
+          if (fileSelection < 0) 
+          {
+            fileSelection = currentDirSize-1;
+            scrollOfset = -(currentDirSize-1);
+          }
         }
       }
       
@@ -243,6 +260,7 @@ int main(int argc, char *argv[])
           closedir(currentDir);
           currentDir = opendir(fileList[fileSelection]);
           chdir(fileList[fileSelection]);
+          oldSelection = fileSelection;
           fileSelection = 0;
           for (int i = 0; i<500; i++)
           {
@@ -258,6 +276,10 @@ int main(int argc, char *argv[])
           }
           currentDirSize = fileCounter;
           printf("%i currentdirsize\n", currentDirSize);
+          oldScrollOffset = scrollOfset;
+          oldSelectOffset = selectOffset;
+          scrollOfset = 0;
+          selectOffset = 0;
         }
       }
 
@@ -281,6 +303,7 @@ int main(int argc, char *argv[])
         }
         currentDirSize = fileCounter;
         printf("%i currentdirsize\n", currentDirSize);
+        scrollOfset = 0;
       }
     }
 
@@ -391,6 +414,9 @@ int main(int argc, char *argv[])
     if (screenWidth < minWidth) screenWidth = minWidth;
     if (screenHeight < minHeight) screenHeight = minHeight;
 
+
+    
+    
     
     shaderBlur = initializeAndUpdateShaderBlur(shouldBlur, screenWidth, screenHeight);
     
@@ -451,9 +477,9 @@ int main(int argc, char *argv[])
             for (int i = 0; i<strlen(oldmatch); i++) seedVal += (int)oldmatch[i]*(int)oldmatch[i];
             SetRandomSeed(seedVal);
             Color fileCol = {GetRandomValue(0,255),GetRandomValue(0,255),GetRandomValue(0,255),100};
-            DrawRectangle(200, 100+spacing, strlen(str) * glphWidth, lineHeight, fileCol);
-            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + 1}, textSize, 0, BLACK);
-            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, WHITE);
+            DrawRectangle(200, 100+spacing + (scrollOfset * lineHeight), strlen(str) * glphWidth, lineHeight, fileCol);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + 1 + (scrollOfset*lineHeight)}, textSize, 0, BLACK);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + (scrollOfset * lineHeight)}, textSize, 0, WHITE);
           }
         }
         else if (S_ISDIR(fs.st_mode))
@@ -474,14 +500,14 @@ int main(int argc, char *argv[])
           if (!peekMode)
           {
             sprintf(str, "\\%s", fileList[fileCounter]);
-            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, BLACK);
+            DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + (scrollOfset * lineHeight)}, textSize, 0, BLACK);
           }
         }
         if (fileCounter == fileSelection && !peekMode)
         {
           // DrawRectangleRounded((Rectangle){200-glphWidth, 100+spacing, glphWidth*(2+strlen(str)), lineHeight},20,5,(Color){100,100,250,30}); 
-          DrawRectangleRounded((Rectangle){200-glphWidth, 100+spacing, glphWidth*(2+strlen(str)), lineHeight},20,5,(Color){100,100,250,255}); 
-          DrawTextEx(myFont, str, (Vector2){200, 100 + spacing}, textSize, 0, WHITE);
+          DrawRectangleRounded((Rectangle){200-glphWidth, 100+spacing + (scrollOfset * lineHeight), glphWidth*(2+strlen(str)), lineHeight},20,5,(Color){100,100,250,255}); 
+          DrawTextEx(myFont, str, (Vector2){200, 100 + spacing + (lineHeight * scrollOfset)}, textSize, 0, WHITE);
           // DrawCircle(199+((1+strlen(str))*glphWidth), 99+spacing+(lineHeight / 2.0), 4, WHITE);
           // DrawCircle(201+((1+strlen(str))*glphWidth), 101+spacing+(lineHeight / 2.0), 4, DARKBLUE);
           // DrawCircle(200+((1+strlen(str))*glphWidth), 100+spacing+(lineHeight / 2.0), 4, BLUE);
