@@ -1,17 +1,16 @@
 -- minimum --
-[] fix missing symbols
-[] complete vim-bindings
-[] code cleanup
-[] file-browser / opening files in-editor
+[x] fix missing symbols
+[x] code cleanup
+[x] file-browser / opening files in-editor
 [] basic syntax-hl
-[] settings
-[] help-page
+[] complete vim-bindings
 
 -- extended --
 [] search
-[] drag file into window
 [] formatting
 [] shrink-scrolling
 [] split-window
+[] settings
+[] help-page
 
 

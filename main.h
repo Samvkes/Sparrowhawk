@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+void shakeScreen(int xStr, int yStr, bool shakeNow);
+
 extern Font myFont;
 extern Font gutterFont;
 extern Font highlightFont;
@@ -26,5 +28,6 @@ extern int screenHeight;
 extern FILE *fp;
 extern int pressedCounter;
 extern int frameCounter;
+
 
 #endif

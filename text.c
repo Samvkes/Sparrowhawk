@@ -12,6 +12,8 @@
 // Program main entry point
 //------------------------------------------------------------------------------------
 
+
+
 int calcLinesOnScreen(int scrHeight, int lnHeight)
 {
   return scrHeight / lnHeight;
@@ -154,12 +156,11 @@ Vector2 posToCur(int position)
   textCursor.y = position - lin[i].start;
   //printf("new cursor: %f %f \n", textCursor.x, textCursor.y);
   return textCursor;
-}
-
+}  
 
 int handleText(Vector2 textCursor)
 {
-  if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start) currentMode = INSERT;
+  if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start && currentMode == APPEND) currentMode = INSERT;
   int position = curToPos(textCursor);
   static int key = 0;
   static int counter = 0;
@@ -209,7 +210,7 @@ int handleText(Vector2 textCursor)
 }
 
 
-Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOrRight, int past_biggest_y)
+Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOrRight)
 {
 
   if (textCursor.y < 0 && textCursor.x == 0) { textCursor.y = 0; }
@@ -218,7 +219,7 @@ Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOr
   
   if (movedUpOrDown)
   {
-    if (textCursor.y < past_biggest_y) textCursor.y = past_biggest_y;
+    if (textCursor.y < cs.past_biggest_y) textCursor.y = cs.past_biggest_y;
   }
   
   if (textCursor.y > ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
@@ -236,7 +237,7 @@ Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOr
 
   if (movedLeftOrRight)
   {
-    past_biggest_y = textCursor.y;
+    cs.past_biggest_y = textCursor.y;
   }
 
   return textCursor;
@@ -253,35 +254,43 @@ FILE *initializeText(char *fileName)
   fp = fopen(fileName, "r");
   text = malloc(bufSize);
   puts("2");
-  
+  char *newText;
   while (c = fgetc(fp), c != EOF) {
     if (offset == bufSize -1) {
       bufSize = bufSize * 2;
-      char *newText = realloc(text, bufSize); 
+      newText = realloc(text, bufSize); 
       text = newText;
     }
     text[offset++] = c;
   }
+  printf("%i\n", offset);
   fclose(fp);
   puts("3");
   if (c == EOF && offset == 0) { free(text); puts("enter a file with content"); exit(1); }
   text[offset] = '\0';
-
   lin = lines();
   puts("4");
   return fp;
 }
 
-typedef struct cursorStatus 
+
+void resetCursor()
 {
-  Vector2 textCursor;
-  Vector2 textPos;
-  Vector2 cursorPos;
-  Vector2 cursorTargetPos;
-  Vector2 pastCursorPos[30];
-  int scrollOfset;
-  int horOfset;
-} cursorStatus;
+  cs.textCursor = (Vector2){0,0};
+  cs.textPos = (Vector2){30 + (4*glphWidth) + 5, 10 };
+  cs.cursorPos = (Vector2){0,0};
+  cs.cursorTargetPos = (Vector2){0,0};
+  for (int i=0; i<30; i++)
+  {
+    cs.pastCursorPos[i] = (Vector2){0,0};
+  }
+  cs.scrollOfset = 0;
+  cs.horOfset = 0;
+  cs.lowerHinge = 5;
+  cs.upperHinge = 15;
+  cs.horHinge = 5;
+}
+
 
 cursorStatus cs;
 int toMove = 0;
@@ -330,6 +339,9 @@ void initializeTextEditor()
   }
   cs.scrollOfset = 0;
   cs.horOfset = 0;
+  cs.lowerHinge = 5;
+  cs.upperHinge = 15;
+  cs.horHinge = 5;
   float lerpval = 0;
   bool lerping = false;
 }
@@ -338,12 +350,8 @@ void initializeTextEditor()
 
 bool handleTextInput()
 {
-  static int lowerHinge = 5;
-  static int upperHinge = 15;
-  static int horHinge = 5;
   static float lerpval = 0;
   static bool lerping = false;
-  static int past_biggest_y = 0;
   float lerptime = 0.1;
   int leftGutterPadding = 5;  
   int gutterWidth = 30;
@@ -359,6 +367,8 @@ bool handleTextInput()
     if (IsKeyPressed(KEY_Q))
     {
       free(text); 
+      free(lin);
+      lineCounter = 0;
       return true;
     }
     if (IsKeyPressed(KEY_S) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
@@ -460,19 +470,19 @@ bool handleTextInput()
 
   
   // textCursor handling    
-  cs.textCursor = checkTextCursor(cs.textCursor, movedUpOrDown, movedLeftOrRight, past_biggest_y);
+  cs.textCursor = checkTextCursor(cs.textCursor, movedUpOrDown, movedLeftOrRight);
 
 
   int amountOfLines = screenHeight / lineHeight;
   if (amountOfLines < 11)
   {
-    lowerHinge = 0;
-    upperHinge = amountOfLines; 
+    cs.lowerHinge = 0;
+    cs.upperHinge = amountOfLines; 
   }
   else
   {
-    upperHinge = amountOfLines - 5;
-    lowerHinge = 5;
+    cs.upperHinge = amountOfLines - 5;
+    cs.lowerHinge = 5;
   }
 
   bool notInPlace = true;
@@ -482,12 +492,12 @@ bool handleTextInput()
     cs.cursorTargetPos.x = gutterWidth + leftMargin + ((cs.textCursor.y - cs.horOfset) * glphWidth);
     cs.cursorTargetPos.y = topMargin + ((cs.textCursor.x - cs.scrollOfset) * lineHeight);
 
-    if (cs.cursorTargetPos.y / lineHeight >= upperHinge)
+    if (cs.cursorTargetPos.y / lineHeight >= cs.upperHinge)
     {
       cs.scrollOfset += 1;
       notInPlace = true;
     }
-    if (cs.cursorTargetPos.y / lineHeight <= lowerHinge)
+    if (cs.cursorTargetPos.y / lineHeight <= cs.lowerHinge)
     {
       if (cs.scrollOfset > 0)
       {
@@ -496,12 +506,12 @@ bool handleTextInput()
       }
     }
 
-    if (cs.cursorTargetPos.x / (float)glphWidth >= (screenWidth / (float)glphWidth) - horHinge)
+    if (cs.cursorTargetPos.x / (float)glphWidth >= (screenWidth / (float)glphWidth) - cs.horHinge)
     {
       cs.horOfset += 1;
       notInPlace = true;
     }
-    if (cs.cursorTargetPos.x / (float)glphWidth <= ((leftMargin + gutterWidth) / (float)glphWidth) + horHinge)
+    if (cs.cursorTargetPos.x / (float)glphWidth <= ((leftMargin + gutterWidth) / (float)glphWidth) + cs.horHinge)
     {
       if (cs.horOfset > 0)
       {
@@ -516,7 +526,7 @@ bool handleTextInput()
     
 void drawTextEditor()
 {
-  int leftGutterPadding = 5 + glphWidth;  
+  int leftGutterPadding = 5;  
   int gutterWidth = 30;
   int leftMargin = 4 * glphWidth + leftGutterPadding;
   cs.textPos.x = gutterWidth + leftMargin;

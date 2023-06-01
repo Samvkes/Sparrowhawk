@@ -24,6 +24,29 @@ FILE *fp;
 int pressedCounter;
 int frameCounter;
 
+
+void shakeScreen(int xStr, int yStr, bool shakeNow)
+{
+  static int shakeDur = 0;
+  static Vector2 oldPos;
+  static int xStrength = 0;
+  static int yStrength = 0;
+  if (shakeNow && shakeDur < 1) 
+  {
+    shakeDur = 10;
+    oldPos = GetWindowPosition();
+  }
+  else shakeDur--;
+  if (xStr > -1) xStrength = xStr;
+  if (yStr > -1) yStrength = yStr;
+  if (shakeDur > 0)
+  {
+    SetRandomSeed(frameCounter);
+    SetWindowPosition(GetRandomValue(-1 * xStrength, xStrength) + oldPos.x, GetRandomValue(-1 * yStrength, yStrength) + oldPos.y);
+  }
+  else if (shakeDur == 0) SetWindowPosition(oldPos.x, oldPos.y);
+}
+
 int main(int argc, char *argv[])
 {
   // Initialization
@@ -44,13 +67,15 @@ int main(int argc, char *argv[])
   textSize = 20;
   int hlTextSize = 15;
   puts("\n2\n");
-  
+  char startDirBuf[300];
+  getcwd(startDirBuf,300);
   // old lineheight: int lineHeight = (int)(myFont.baseSize * 1.5f);
   lineHeightPadding = 2;
 
 
   // settings
   char *fontname_std = "resources/JetBrainsMono-Bold.ttf";
+
   char *fontname_gut = "resources/iosevka-slab-light.ttf";
   myFont = LoadFontEx(fontname_std, textSize, 0, 0);
   gutterFont = LoadFontEx(fontname_gut, 20, 0, 0);
@@ -109,6 +134,7 @@ int main(int argc, char *argv[])
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
   {
+    shakeScreen(-1,-1,false);
     SetWindowSize(screenWidth, screenHeight);
     int oncog = 0;
     int onminus = 0;
@@ -118,47 +144,59 @@ int main(int argc, char *argv[])
     
     if (bs.selectedFile != NULL && currentlyBrowsing)
     {
+      resetCursor();
       initializeText(bs.selectedFile);
       puts("gelukt");
       currentlyBrowsing = false;
     }
-
-    if (currentMode == NORMAL && !cogging){
-
-      if (IsKeyPressed(KEY_EQUAL)) 
-      {
-        textSize += 1;
-        hlTextSize += 1;
-        UnloadFont(myFont);
-        myFont = LoadFontEx(fontname_std, textSize, 0, 0);
-
-        lineHeight = (int)( myFont.recs[0].height + lineHeightPadding);
-        glphWidth = (int)(myFont.recs[0].width);
-      }
-
-      if (IsKeyPressed(KEY_MINUS))
-      {
-        textSize -= 1;
-        hlTextSize -= 1;
-
-        UnloadFont(myFont);
-        myFont = LoadFontEx(fontname_std, textSize, 0, 0);
-
-        lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
-        glphWidth = (int)(myFont.recs[0].width);
-
-      }
-    }
-    if (currentlyBrowsing)
+    if (!cogging)
     {
-      handleFileBrowserInputs(); 
-    }
-    else
-    {
-      if (handleTextInput())
+      if (currentMode == NORMAL){
+
+        if (IsKeyPressed(KEY_EQUAL)) 
+        {
+          char pastDirBuf[300];
+          getcwd(pastDirBuf, 300);
+          chdir(startDirBuf);
+          textSize += 1;
+          hlTextSize += 1;
+
+          UnloadFont(myFont);
+          myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+          chdir(pastDirBuf);
+
+          lineHeight = (int)( myFont.recs[0].height + lineHeightPadding);
+          glphWidth = (int)(myFont.recs[0].width);
+        }
+
+        if (IsKeyPressed(KEY_MINUS))
+        {
+          char pastDirBuf[300];
+          getcwd(pastDirBuf, 300);
+          chdir(startDirBuf);
+          textSize -= 1;
+          hlTextSize -= 1;
+
+          UnloadFont(myFont);
+          myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+          chdir(pastDirBuf);
+
+          lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
+          glphWidth = (int)(myFont.recs[0].width);
+
+        }
+      }
+      if (currentlyBrowsing)
       {
-        currentlyBrowsing = true;
-        bs.selectedFile = NULL;
+        handleFileBrowserInputs(); 
+      }
+      else
+      {
+        if (handleTextInput())
+        {
+          currentlyBrowsing = true;
+          bs.selectedFile = NULL;
+        }
       }
     }
     
@@ -220,11 +258,13 @@ int main(int argc, char *argv[])
         printf("COG");
         if (cogging)
         {
+          shakeScreen(10,10,true);
           shouldBlur = 0;
           cogging = false;
         } 
         else 
         {
+          shakeScreen(10,10,true);
           shouldBlur = 1;
           cogging = true; 
         }

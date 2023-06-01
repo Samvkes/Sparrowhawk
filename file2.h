@@ -15,6 +15,8 @@
 typedef struct browserStatus
 {
 	char *fileList[500];
+	char *higherList[500];
+	int offsetInHigher;
 	DIR *currentDir;
 	int currentDirSize;
 	char *selectedFile;
@@ -22,6 +24,9 @@ typedef struct browserStatus
   int scrollOfset;
 	bool peekMode;
   int peekOffset;
+	int peekFileLength;
+	char *currentDirName;
+	float bias;
 } browserStatus;
 
 void initializeFileBrowser();
