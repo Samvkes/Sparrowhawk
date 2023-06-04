@@ -89,7 +89,13 @@ int main(int argc, char *argv[])
   textCol = (Color){20, 20, 50, 255};
   Color grad1 = {130,130,130, 255};
   Color grad2 = {155, 138, 118, 255};
-  Color grad3 = {182, 147, 105, 255};
+  Color grad3 = {189, 154, 113, 255};
+  Color grad4 = {160,169,180, 255};
+  Color grad5 = {127, 129, 135, 255};
+  Color grad6 = {99, 101, 115, 255};
+  // Color grad4 = {217,49,49, 255};
+  // Color grad5 = {239, 119, 32, 255};
+  // Color grad6 = {209, 154, 10, 255};
 
   speedTrigger = 20;
   delay = 3;
@@ -323,8 +329,14 @@ int main(int argc, char *argv[])
       if (!isResizing && cogging) BeginTextureMode(tex);
 
       {
-        
-        DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad2, grad1,grad2,grad3);
+        if (!currentlyBrowsing)
+        {
+          DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad2, grad1,grad2,grad3);
+        }
+        else
+        {
+          DrawRectangleGradientEx((Rectangle){0, 0, screenWidth, screenHeight}, grad4, grad5,grad6,grad5);
+        }
         if (currentlyBrowsing)
         {
           drawFileBrowser();
