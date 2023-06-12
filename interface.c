@@ -1,4 +1,3 @@
-#include "raylib.h"
 #include "./interface.h"
 #include <stdlib.h>
 #include <math.h>

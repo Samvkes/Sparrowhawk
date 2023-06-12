@@ -22,6 +22,7 @@ typedef struct cursorStatus
   int upperHinge;
   int horHinge;
   int past_biggest_y;
+  long bufSize;
 } cursorStatus;
 
 

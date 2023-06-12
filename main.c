@@ -1,10 +1,9 @@
-#include "raylib.h"
+#include "./main.h"
 #include "./text.h"
 #include "./interface.h"
 #include "./file2.h"
 #include <stdlib.h>
 #include <math.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -23,6 +22,7 @@ int screenHeight = 600;
 FILE *fp;
 int pressedCounter;
 int frameCounter;
+
 
 
 void shakeScreen(int xStr, int yStr, bool shakeNow)
@@ -326,6 +326,7 @@ int main(int argc, char *argv[])
     //----------------------------------------------------------------------------------
     BeginDrawing();
     {
+
       if (!isResizing && cogging) BeginTextureMode(tex);
 
       {
@@ -392,37 +393,40 @@ int main(int argc, char *argv[])
       DrawLineEx((Vector2){screenWidth,1},(Vector2){screenWidth,screenHeight},3, edgeDark);
       DrawLineEx((Vector2){1,screenHeight},(Vector2){screenWidth,screenHeight},3, edgeDark);
       
-    }
-
-    if (minimizeAtEndOfLoop > 0) 
-    {
-      if (minimizeAtEndOfLoop > 20){
-        minimizeAtEndOfLoop = 0;
-        SetWindowState(FLAG_WINDOW_MINIMIZED); 
-      }
-      else
+    
+      if (minimizeAtEndOfLoop > 0) 
       {
-        minimizeAtEndOfLoop++; 
+        if (minimizeAtEndOfLoop > 20){
+          minimizeAtEndOfLoop = 0;
+          SetWindowState(FLAG_WINDOW_MINIMIZED); 
+        }
+        else
+        {
+          minimizeAtEndOfLoop++; 
         
-        minLerpVal += 1/25.0;
-        minOpa = nLerp(minOpa, 0, minLerpVal);
-        SetWindowOpacity(minOpa);
+          minLerpVal += 1/25.0;
+          minOpa = nLerp(minOpa, 0, minLerpVal);
+          SetWindowOpacity(minOpa);
+        }
       }
-    }
-    else SetWindowOpacity(1);
-    if (closeAtEndOfLoop > 0) 
-    {
-      if (closeAtEndOfLoop > 20) break;
-      else
+      else SetWindowOpacity(1);
+      if (closeAtEndOfLoop > 0) 
       {
-        closeAtEndOfLoop++; 
+        if (closeAtEndOfLoop > 20) break;
+        else
+        {
+          closeAtEndOfLoop++; 
         
-        closeLerpVal += 1/25.0;
-        uph = nLerp(uph, -(screenHeight / 2.0), closeLerpVal);
-        downh = nLerp(downh, screenHeight / 2.0, closeLerpVal);
-        DrawRectangle(0,uph,screenWidth, screenHeight, BLACK);
-        DrawRectangle(0,downh, screenWidth, screenHeight, BLACK);
+          closeLerpVal += 1/25.0;
+          uph = nLerp(uph, -(screenHeight / 2.0), closeLerpVal);
+          downh = nLerp(downh, screenHeight / 2.0, closeLerpVal);
+          DrawRectangle(0,uph,screenWidth, screenHeight, BLACK);
+          DrawRectangle(0,downh, screenWidth, screenHeight, BLACK);
+        }
       }
+      char fps[10]; 
+      sprintf(fps, "%i", GetFPS());
+      DrawText(fps, screenWidth - 20, screenHeight-20, 14, BLACK);
     }
     EndDrawing();
     //----------------------------------------------------------------------------------

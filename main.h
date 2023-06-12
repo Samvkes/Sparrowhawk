@@ -1,14 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 #include "raylib.h"
-#include "./text.h"
-#include "./interface.h"
-#include "./file2.h"
-#include <stdlib.h>
-#include <math.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
 
 void shakeScreen(int xStr, int yStr, bool shakeNow);
 

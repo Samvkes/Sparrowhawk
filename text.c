@@ -1,8 +1,8 @@
-#include "raylib.h"
 #include "./text.h"
 #include "./interface.h"
 #include "./file2.h"
 #include "./main.h"
+#include "./syntax.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
@@ -70,15 +70,25 @@ line *lines()
   int pos = 0;
   int curStart = 0;
   int curStop = 0;
+  lineCounter = 0;
+  bool endsInNl = false;
+  // printf("\n\n");
   while(c = text[pos], c != '\0'){
     if (c == '\n') { 
+      endsInNl = true;
       lines[lineCounter].start = curStart;
       lines[lineCounter].stop = curStop;
       lineCounter = lineCounter + 1;
       curStart = curStop + 1;
     }
+    else endsInNl = false;
     pos++;
     curStop = pos;
+  }
+  if (endsInNl) {lineCounter--;}
+  else {
+    lines[lineCounter].stop = pos;
+    lines[lineCounter].start = curStart;
   }
   return lines;  
 }
@@ -112,25 +122,28 @@ void pop(int pos)
   int textLength = strlen(text);
   if (currentMode != APPEND)
   {
+    if (pos == 0) return;
     for (int i = pos; i<textLength; i++)
     {
       text[i-1] = text[i];
     }
+    text[textLength-1] = 0;
   }
   else
   {
+    if (pos == 0) currentMode = INSERT;
     for (int i = pos+1; i<textLength; i++)
     {
       text[i-1] = text[i];
     }
-
+    text[textLength-1] = 0;
   }
 }
 
 
 int curToPos(Vector2 textCursor)
 {
-  //printf("cursor in curtopos: %i, %i", (int)textCursor.x, (int)textCursor.y);
+  // printf("\nSTART\ncursor in curtopos: %i, %i", (int)textCursor.x, (int)textCursor.y);
   int position = lin[(int)textCursor.x].start + (int)textCursor.y;
   //printf("\n%i %i %i\n", position, lin[(int)textCursor.x].start, lin[(int)textCursor.x].stop);
   if (position > lin[(int)textCursor.x].stop)
@@ -138,7 +151,7 @@ int curToPos(Vector2 textCursor)
     currentMode = APPEND;
     position = lin[(int)textCursor.x].stop;
   }
-  //printf("new pos: %i\n", position);
+  // printf("new pos: %i\n", position);
   return position;
 }
 
@@ -147,20 +160,24 @@ Vector2 posToCur(int position)
 {
   Vector2 textCursor = {0, 0};
   int i = 0;
-  while (position >= lin[i].start)
+  while (position > lin[i].stop)
   {
+    // printf("\nlin[i].start:%i, i: %i\n", lin[i].start, i);
     i++;
   }
-  i--;
+  
   textCursor.x = i;
   textCursor.y = position - lin[i].start;
-  //printf("new cursor: %f %f \n", textCursor.x, textCursor.y);
+  // printf("new cursor: %f %f \nEND\n", textCursor.x, textCursor.y);
   return textCursor;
 }  
 
 int handleText(Vector2 textCursor)
 {
-  if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start && currentMode == APPEND) currentMode = INSERT;
+  if (textCursor.y == lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start && currentMode == APPEND)
+  {
+     currentMode = INSERT;
+  }
   int position = curToPos(textCursor);
   static int key = 0;
   static int counter = 0;
@@ -202,10 +219,15 @@ int handleText(Vector2 textCursor)
   { 
     add('\n', position); 
     lineCounter += 1;
-    position++;
+    if (currentMode == APPEND)
+    {
+      position += 2;
+      currentMode = INSERT;
+    }
+    else position += 1;
   }
   else if (key == 32) { add(' ', position); position++; }
-  else if (key == 259 && position > 1) { pop(position); position--;}
+  else if (key == 259) { pop(position); position--;}
   return position;
 }
 
@@ -216,6 +238,7 @@ Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOr
   if (textCursor.y < 0 && textCursor.x == 0) { textCursor.y = 0; }
   else if (textCursor.y < 0) { textCursor.x--; textCursor.y = (lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start); } 
   if (textCursor.x < 0) textCursor.x = 0;
+  if (textCursor.x > lineCounter) textCursor.x = lineCounter;
   
   if (movedUpOrDown)
   {
@@ -224,7 +247,7 @@ Vector2 checkTextCursor(Vector2 textCursor, bool movedUpOrDown, bool movedLeftOr
   
   if (textCursor.y > ((lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start)))
   { 
-    if (!movedUpOrDown)
+    if (!movedUpOrDown && textCursor.x != lineCounter)
     {
       textCursor.x++;
       textCursor.y = 0; //lin[(int)textCursor.x].stop - lin[(int)textCursor.x].start;
@@ -248,17 +271,16 @@ FILE *initializeText(char *fileName)
 {
   puts("hai");
   FILE *fp;
-  int bufSize = 100;
   int offset = 0;
   int c;
   fp = fopen(fileName, "r");
-  text = malloc(bufSize);
+  text = malloc(cs.bufSize);
   puts("2");
   char *newText;
   while (c = fgetc(fp), c != EOF) {
-    if (offset == bufSize -1) {
-      bufSize = bufSize * 2;
-      newText = realloc(text, bufSize); 
+    if (offset == cs.bufSize -1) {
+      cs.bufSize = cs.bufSize * 2;
+      newText = realloc(text, cs.bufSize); 
       text = newText;
     }
     text[offset++] = c;
@@ -276,6 +298,7 @@ FILE *initializeText(char *fileName)
 
 void resetCursor()
 {
+  cs.bufSize = 100;
   cs.textCursor = (Vector2){0,0};
   cs.textPos = (Vector2){30 + (4*glphWidth) + 5, 10 };
   cs.cursorPos = (Vector2){0,0};
@@ -284,6 +307,7 @@ void resetCursor()
   {
     cs.pastCursorPos[i] = (Vector2){0,0};
   }
+  cs.past_biggest_y = 0;
   cs.scrollOfset = 0;
   cs.horOfset = 0;
   cs.lowerHinge = 5;
@@ -308,7 +332,7 @@ Texture2D gutter_bot_t;
 
 void initializeTextEditor()
 {
-  int leftGutterPadding = 5;  
+  int leftGutterPadding = 10;  
   int gutterWidth = 30;
   int leftMargin = 4 * glphWidth + leftGutterPadding;
   int topMargin = 10;
@@ -353,7 +377,7 @@ bool handleTextInput()
   static float lerpval = 0;
   static bool lerping = false;
   float lerptime = 0.1;
-  int leftGutterPadding = 5;  
+  int leftGutterPadding = 10;  
   int gutterWidth = 30;
   int leftMargin = 4 * glphWidth + leftGutterPadding;
   int topMargin = 10;
@@ -453,6 +477,24 @@ bool handleTextInput()
     lineCounter = 0;
     lin = lines();
     cs.textCursor = posToCur(newPos);
+    if (strlen(text) > cs.bufSize * 0.8)
+    {
+      printf("reallocating! current bufsize: %li\n", cs.bufSize);
+      char *newText;
+      cs.bufSize = cs.bufSize * 2;
+      newText = realloc(text, cs.bufSize); 
+      text = newText;
+      printf("New bufsize: %li\n", cs.bufSize);
+    }
+    else if (strlen(text) < cs.bufSize * 0.2)
+    {
+      printf("reallocating! current bufsize: %li\n", cs.bufSize);
+      char *newText;
+      cs.bufSize = cs.bufSize * 0.5;
+      newText = realloc(text, cs.bufSize); 
+      text = newText;
+      printf("New bufsize: %li\n", cs.bufSize);
+    }
   }
 
   
@@ -526,7 +568,7 @@ bool handleTextInput()
     
 void drawTextEditor()
 {
-  int leftGutterPadding = 5;  
+  int leftGutterPadding = 10;  
   int gutterWidth = 30;
   int leftMargin = 4 * glphWidth + leftGutterPadding;
   cs.textPos.x = gutterWidth + leftMargin;
@@ -535,6 +577,7 @@ void drawTextEditor()
   int amountOfLines = screenHeight / lineHeight;
   float cursorXMicroAdjust = -1;
   int trailAmount = 30;
+  static int wiggles = 0;
 
   Color cursorColor = { 20, 20, 250, 200 };
   cursorColor.a = (int)(50 * (1.5 + sin((frameCounter / 15.0))));
@@ -542,7 +585,7 @@ void drawTextEditor()
   Color shadowTextCol = {textCol.r, textCol.g, textCol.b, 60};
   Color lineNumCol = {textCol.r, textCol.g, textCol.b, 180};
   
-  int amountOfGutterPieces = (screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) / gutter_mid_t.height;
+  int amountOfGutterPieces = ((screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) - wiggles) / gutter_mid_t.height;
   int gutterSpacing = gutterTopMargin + gutter_top_t.height;
   DrawTexture(gutter_top_t, leftMargin, gutterTopMargin, WHITE);
   for (int i = 0; i < amountOfGutterPieces; i++)
@@ -590,6 +633,7 @@ void drawTextEditor()
   int spacing = topMargin;
   for (int i = cs.scrollOfset; i<amountOfLines + cs.scrollOfset; i++)
   {
+    bool isThisANewLine = true;
     char regel[200] = {0};
     int regelEnd = lin[i].stop;
 
@@ -622,32 +666,50 @@ void drawTextEditor()
       }
     }
     cs.textPos.y = spacing;
-    char str[5];
-    sprintf(str, "%4d", i);
-    if (i == cs.textCursor.x)
-    {
-      DrawTextEx(myFont, str, (Vector2){2, spacing}, textSize, 2, (Color){0,0,255,255});
+    if (i <= lineCounter) {
+      wiggles = 0;
+      if (text[regelEnd] == '\n') DrawTextEx(myFont, "\\n", (Vector2){cs.textPos.x + (strlen(regel) * glphWidth), cs.textPos.y}, textSize, 0, (Color){0,0,0,20}); 
+      char str[5];
+      sprintf(str, "%4d", i);
+      if (i == cs.textCursor.x)
+      {
+        DrawTextEx(myFont, str, (Vector2){2, spacing}, textSize, 2, (Color){0,0,255,255});
+      }
+      else 
+      {
+        DrawTextEx(myFont, str, (Vector2){0, spacing}, textSize, 2, lineNumCol);
+      }
+      if (i % 2 == 0)
+      {
+        DrawRectangle(cs.textPos.x - 10, cs.textPos.y, screenWidth - (gutterWidth + leftMargin) + 10, lineHeight, (Color){20,20,20,7});
+      }
     }
-    else 
+    else if (i == lineCounter+1)
     {
-      DrawTextEx(myFont, str, (Vector2){0, spacing}, textSize, 2, lineNumCol);
+      wiggles = screenHeight - (cs.textPos.y + (lineHeight/2.0));
+      DrawRectangleGradientV(0, cs.textPos.y + (lineHeight/2.0), screenWidth, lineHeight, (Color){20,20,20,50}, (Color){20,20,20,0});
+      // DrawRectangleGradientH(0, cs.textPos.y + (lineHeight / 2.0), 30, screenHeight, (Color){20,20,20,50}, (Color){20,20,20,0});
+      // char str[5];
+      // sprintf(str, "%4s", ":]");
+      // DrawTextEx(myFont, str, (Vector2){0, spacing}, textSize, 2, (Color){0,0,0,150});
     }
-    if (i % 2 == 0)
-    {
-      DrawRectangle(cs.textPos.x - 10, cs.textPos.y, screenWidth - (gutterWidth + leftMargin) + 10, lineHeight, (Color){20,20,20,7});
-    }
-    if (doShadowRegel) DrawTextEx(myFont, shadowRegel, (Vector2){cs.textPos.x, cs.textPos.y + (int)((lineHeight + lineHeightPadding) / 2)}, textSize, 2, shadowTextCol);
+    // if (doShadowRegel) DrawTextEx(myFont, shadowRegel, (Vector2){cs.textPos.x, cs.textPos.y + (int)((lineHeight + lineHeightPadding) / 2)}, textSize, 2, shadowTextCol);
 
     bool leadingSpace = true;
     for (int j = 0; j < strlen(regel); j++){
+      Color syntaxCol = syntaxHl(i, j, isThisANewLine);
+      if (isThisANewLine) isThisANewLine = false;
       if (regel[j] == ' ' && leadingSpace)
       {
-        DrawLineEx((Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y}, (Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y + lineHeight}, 2, (Color){20,20,20,30});
+        if (j % 2 == 0)
+        {
+          DrawLineEx((Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y}, (Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y + lineHeight}, 2, (Color){20,20,20,20});
+        }
       }
       else
       {
         leadingSpace = false;
-        DrawTextCodepoint(myFont, regel[j], (Vector2){cs.textPos.x + (j * glphWidth), cs.textPos.y}, textSize, textCol); 
+        DrawTextCodepoint(myFont, regel[j], (Vector2){cs.textPos.x + (j * glphWidth), cs.textPos.y}, textSize, syntaxCol); 
 
       }
     }

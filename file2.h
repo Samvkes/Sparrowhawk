@@ -2,15 +2,7 @@
 #define FILE2_H
 
 #include "raylib.h"
-#include "./interface.h"
-#include <stdlib.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <dirent.h>
-#include <unistd.h>
 
 typedef struct browserStatus
 {
@@ -21,12 +13,13 @@ typedef struct browserStatus
 	int currentDirSize;
 	char *selectedFile;
 	int fileSelection;
-  int scrollOfset;
+  double scrollOfset;
 	bool peekMode;
   int peekOffset;
 	int peekFileLength;
 	char *currentDirName;
 	float bias;
+	bool isMoving;
 } browserStatus;
 
 void initializeFileBrowser();

@@ -1,4 +1,3 @@
-#include "raylib.h"
 #include "./interface.h"
 #include <stdlib.h>
 #include "./text.h"
@@ -9,7 +8,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <unistd.h>
 
 browserStatus bs;
@@ -58,7 +56,7 @@ void initializeFileBrowser()
     fileCounter++;
   }
 
-
+  bs.scrollOfset = 0;  
   bs.currentDirSize = fileCounter;
   bs.fileSelection = 0;
 	bs.selectedFile = NULL;
@@ -66,6 +64,7 @@ void initializeFileBrowser()
   bs.currentDirName = getCurrentDirName();
   bs.offsetInHigher = 0;
   bs.bias = 0;
+  bs.isMoving = false;
   shakeScreen(0,0,true);
   // strcpy(bs.currentDirName, getCurrentDirName());
   printf("\n\nDIT: %s\n\n",bs.currentDirName);
@@ -127,10 +126,11 @@ void handleFileBrowserInputs()
     else if (!bs.peekMode && pressedCounter > speedTrigger)
     {
       if (bs.bias > -30) bs.bias--;
-      delay = fmax((int)(3 * ((1/60.0) / GetFrameTime())), 1);
+      delay = fmax((int)(2 * ((1/60.0) / GetFrameTime())), 1);
       if (frameCounter % delay == 0) 
       {
-        bs.scrollOfset++;
+        bs.isMoving = true;
+        bs.scrollOfset += 1;
         bs.fileSelection--;
         if (bs.fileSelection < 0) 
         {
@@ -149,10 +149,11 @@ void handleFileBrowserInputs()
     else if (!bs.peekMode && pressedCounter > speedTrigger)
     {
       if (bs.bias < 30) bs.bias++;
-      delay = fmax((int)(3 * ((1/60.0) / GetFrameTime())), 1);
+      delay = fmax((int)(2 * ((1/60.0) / GetFrameTime())), 1);
       if (frameCounter % delay == 0) 
       {
-        bs.scrollOfset--;
+        bs.isMoving = true;
+        bs.scrollOfset -= 1;
         bs.fileSelection++;
         if (bs.fileSelection > bs.currentDirSize-1) 
         {
@@ -167,14 +168,16 @@ void handleFileBrowserInputs()
 
   if (IsKeyReleased(KEY_J) || IsKeyReleased(KEY_K)) 
   { 
+    bs.isMoving = false;
+    bs.scrollOfset = (int)bs.scrollOfset;
     pressedCounter = 0; 
   } 
 
   if (!IsKeyDown(KEY_J) && !IsKeyDown(KEY_K))
   {
     if (fabsf(bs.bias) < 3) bs.bias = 0;
-    else if (bs.bias < 0) bs.bias += 3;
-    else bs.bias -= 3;
+    else if (bs.bias < 0) bs.bias += 2;
+    else bs.bias -= 2;
   } 
   
   
@@ -292,9 +295,13 @@ void drawFileBrowser()
 	int fileCounter = 0;
 	int spacing = 0 - (bs.bias*0.8);
   int curCropLength = 35;
-
-  // drawing files
-  if(!bs.peekMode)
+  if (bs.isMoving) {
+    int quar = screenWidth / 4.0;
+    DrawRectangleGradientH(0,0,quar,screenHeight,(Color){0,0,0,100},(Color){0,0,0,0}); 
+    DrawRectangleGradientH(screenWidth-quar,0,quar,screenHeight,(Color){0,0,0,0},(Color){0,0,0,100}); 
+  }
+  // drawing files of upper folder
+  if(!bs.peekMode && !bs.isMoving)
   {
     spacing = 0;
     if (strlen(bs.higherList[0]) > 0)
@@ -323,13 +330,19 @@ void drawFileBrowser()
     {
       DrawRectangleGradientH(0,0,50,screenHeight,(Color){0,0,0,100},(Color){0,0,0,0}); 
     }
-    spacing = 0;
+	  spacing = 0 - (bs.bias*0.8);
     // DrawRectangleGradientV(0,0,screenWidth,30,(Color){0,0,0,60},(Color){0,0,0,0}); 
-           
   }
+
 
   while (fileCounter < bs.currentDirSize)
   {
+    if (( (bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing + 60 + (bs.scrollOfset * lineHeight) > screenHeight && (screenHeight/2.0) - (lineHeight/2.0) + spacing + 1 + (bs.scrollOfset*lineHeight) < 0 ) || ( (-1 * bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing - 60 + (bs.scrollOfset * lineHeight) < 0 && (screenHeight/2.0) - (lineHeight/2.0) + spacing + 1 + (bs.scrollOfset*lineHeight) > screenHeight) )
+    {
+      spacing += lineHeight;
+      fileCounter++; 
+      continue;
+    }
     int r = stat(bs.fileList[fileCounter], &fs);
     if ( r==-1) {puts("error reading filename with stat"); exit(1);}
     int filesInDir = 0;
@@ -338,7 +351,8 @@ void drawFileBrowser()
     char infoStr[100];
     if (S_ISREG(fs.st_mode))
     { 
-      if (fileCounter == bs.fileSelection)
+      // peeking at files and background printing
+      if (fileCounter == bs.fileSelection && !bs.isMoving)
       {
         FILE * fp = fopen(bs.fileList[fileCounter], "r");
         int headSpacing = 10;
@@ -363,7 +377,7 @@ void drawFileBrowser()
         }
         else sprintf(str, "%s", bs.fileList[fileCounter]);
         char toTokenize[200];
-        strcpy(toTokenize, str);
+        strcpy(toTokenize, bs.fileList[fileCounter]);
         char * match;
         char oldmatch[100];
         match = strtok(toTokenize, ".");
@@ -435,7 +449,7 @@ void drawFileBrowser()
       }
       else
       {
-        sprintf(infoStr, "Size of  %lu byte(s)", fs.st_size); 
+        sprintf(infoStr, "Size of %lu byte(s)", fs.st_size); 
       }
       if (screenWidth > ((screenWidth / 2.0) + ((strlen(selStr)*glphWidth) / 2.0) + 65 - 10) + ((strlen(infoStr) * glphWidth) + 20))
       {
@@ -457,21 +471,32 @@ void drawFileBrowser()
     fileCounter++;
   }
   if (!bs.peekMode){
+    Color myBlue = BLUE;
+    Color myDarkBlue = DARKBLUE;
+    Color myBlack = BLACK;
+    if (bs.isMoving)
+    {
+      int factor = 100;
+      myBlue.a = factor;
+      myDarkBlue.a = factor;
+      myBlack.a = factor;
+    }
+
     char cwdBuf[300];
     getcwd(cwdBuf, 300);
     if (screenWidth >  30+ strlen(cwdBuf)*glphWidth)
     {
-      DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth, 2+lineHeight},20,5,DARKBLUE);
-      DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth,lineHeight},20,5,BLUE);
-      DrawTextEx(myFont, cwdBuf, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, BLACK);
+      DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth, 2+lineHeight},20,5,myDarkBlue);
+      DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth,lineHeight},20,5,myBlue);
+      DrawTextEx(myFont, cwdBuf, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
     }
     else
     {
       char str[50];
       snprintf(str, 50, "...\\%s", bs.currentDirName);
-      DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth, 2+lineHeight},20,5,DARKBLUE);
-      DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth,lineHeight},20,5,BLUE);
-      DrawTextEx(myFont, str, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, BLACK);
+      DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth, 2+lineHeight},20,5,myDarkBlue);
+      DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth,lineHeight},20,5,myBlue);
+      DrawTextEx(myFont, str, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
     }
   }
 
