@@ -6,6 +6,7 @@
 void shakeScreen(int xStr, int yStr, bool shakeNow);
 
 extern Font myFont;
+extern Font boldFont;
 extern Font gutterFont;
 extern Font highlightFont;
 extern int glphWidth;

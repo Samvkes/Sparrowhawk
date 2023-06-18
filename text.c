@@ -13,6 +13,18 @@
 //------------------------------------------------------------------------------------
 
 
+int getIndentAmount(Vector2 textCursor)
+{
+  int indentAmount = 0;  
+  int checkStart = lin[(int)textCursor.x].start;
+  for (int i = 0; i< 100; i++)
+  {
+    if (text[checkStart + i] == ' ') indentAmount += 1;
+    else break;
+
+  }
+  return indentAmount;
+}
 
 int calcLinesOnScreen(int scrHeight, int lnHeight)
 {
@@ -63,7 +75,9 @@ float approach(float current, float target, float amount)
 
 line *lines()
 {
-  line *lines = calloc(10000, sizeof(line));
+  int bufSize = 1000;
+  line *lines = calloc(bufSize, sizeof(line));
+  line * newLines;
 
   char c;
   int length = strlen(text);
@@ -74,6 +88,12 @@ line *lines()
   bool endsInNl = false;
   // printf("\n\n");
   while(c = text[pos], c != '\0'){
+    if (pos == bufSize - 10)
+    {
+      bufSize = 2 * bufSize; 
+      newLines = realloc(lines, bufSize);
+      lines = newLines;
+    }
     if (c == '\n') { 
       endsInNl = true;
       lines[lineCounter].start = curStart;
@@ -215,8 +235,15 @@ int handleText(Vector2 textCursor)
     }
     position++;
   }
+  else if (key == 258) 
+  {
+    add(' ', position);
+    add(' ', position);
+    position += 2;
+  }
   else if (key == 257) 
   { 
+    int indentAmount = getIndentAmount(textCursor);
     add('\n', position); 
     lineCounter += 1;
     if (currentMode == APPEND)
@@ -225,6 +252,11 @@ int handleText(Vector2 textCursor)
       currentMode = INSERT;
     }
     else position += 1;
+    for (int i = 0; i < indentAmount; i++)
+    {
+      add(' ', position);
+    }
+    position += indentAmount;
   }
   else if (key == 32) { add(' ', position); position++; }
   else if (key == 259) { pop(position); position--;}
@@ -429,6 +461,41 @@ bool handleTextInput()
       else { pressedCounter += 1; }
     }
 
+    if (IsKeyPressed(KEY_O)) 
+    { 
+      int indentAmount = getIndentAmount(cs.textCursor);
+      int position = lin[(int)cs.textCursor.x].stop + 1;
+      add('\n', position); 
+      for (int i = 0; i < indentAmount; i++)
+      {
+        add(' ',position);
+      }
+      free(lin);
+      lineCounter = 0;
+      lin = lines();
+      if (strlen(text) > cs.bufSize * 0.8)
+      {
+        printf("reallocating! current bufsize: %li\n", cs.bufSize);
+        char *newText;
+        cs.bufSize = cs.bufSize * 2;
+        newText = realloc(text, cs.bufSize); 
+        text = newText;
+        printf("New bufsize: %li\n", cs.bufSize);
+      }
+      else if (strlen(text) < cs.bufSize * 0.2)
+      {
+        printf("reallocating! current bufsize: %li\n", cs.bufSize);
+        char *newText;
+        cs.bufSize = cs.bufSize * 0.5;
+        newText = realloc(text, cs.bufSize); 
+        text = newText;
+        printf("New bufsize: %li\n", cs.bufSize);
+      }
+      cs.textCursor.x += 1;
+      cs.textCursor.y = indentAmount;
+      currentMode = INSERT;
+    } 
+
     if (IsKeyPressed(KEY_L)) 
     { 
       lerpval = 0;
@@ -587,13 +654,16 @@ void drawTextEditor()
   
   int amountOfGutterPieces = ((screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) - wiggles) / gutter_mid_t.height;
   int gutterSpacing = gutterTopMargin + gutter_top_t.height;
-  DrawTexture(gutter_top_t, leftMargin, gutterTopMargin, WHITE);
-  for (int i = 0; i < amountOfGutterPieces; i++)
+  if (amountOfGutterPieces > -1)
   {
-    DrawTexture(gutter_mid_t, leftMargin, gutterSpacing, WHITE);
-    gutterSpacing += gutter_mid_t.height;
+    DrawTexture(gutter_top_t, leftMargin, gutterTopMargin, WHITE);
+    for (int i = 0; i < amountOfGutterPieces; i++)
+    {
+      DrawTexture(gutter_mid_t, leftMargin, gutterSpacing, WHITE);
+      gutterSpacing += gutter_mid_t.height;
+    }
+    DrawTexture(gutter_bot_t, leftMargin, gutterSpacing, WHITE);
   }
-  DrawTexture(gutter_bot_t, leftMargin, gutterSpacing, WHITE);
 
   // cursor drawing
   if (currentMode == NORMAL)
@@ -631,6 +701,7 @@ void drawTextEditor()
   }
 
   int spacing = topMargin;
+  bool isCleared = true;
   for (int i = cs.scrollOfset; i<amountOfLines + cs.scrollOfset; i++)
   {
     bool isThisANewLine = true;
@@ -686,9 +757,12 @@ void drawTextEditor()
     }
     else if (i == lineCounter+1)
     {
+      int speling = 5;
       wiggles = screenHeight - (cs.textPos.y + (lineHeight/2.0));
-      DrawRectangleGradientV(0, cs.textPos.y + (lineHeight/2.0), screenWidth, lineHeight, (Color){20,20,20,50}, (Color){20,20,20,0});
-      // DrawRectangleGradientH(0, cs.textPos.y + (lineHeight / 2.0), 30, screenHeight, (Color){20,20,20,50}, (Color){20,20,20,0});
+      DrawRectangleGradientV(speling, cs.textPos.y + (lineHeight/2.0), screenWidth - (speling*2), lineHeight, (Color){20,20,20,50}, (Color){20,20,20,0});
+      DrawRectangleGradientH(speling, cs.textPos.y + (lineHeight / 2.0), 30, (screenHeight - (cs.textPos.y + (lineHeight / 2.0)))-(speling), (Color){20,20,20,50}, (Color){20,20,20,0});
+      DrawLineEx((Vector2){screenWidth - speling, cs.textPos.y + (lineHeight / 2.0)}, (Vector2){screenWidth-speling, (screenHeight - speling)}, 1, (Color){200,200,200,200});
+      DrawLineEx((Vector2){speling, screenHeight-speling}, (Vector2){screenWidth-speling, (screenHeight - speling)}, 1, (Color){200,200,200,200});
       // char str[5];
       // sprintf(str, "%4s", ":]");
       // DrawTextEx(myFont, str, (Vector2){0, spacing}, textSize, 2, (Color){0,0,0,150});
@@ -697,11 +771,20 @@ void drawTextEditor()
 
     bool leadingSpace = true;
     for (int j = 0; j < strlen(regel); j++){
-      Color syntaxCol = syntaxHl(i, j, isThisANewLine);
+      syntaxRet s;
+      s = syntaxHl(i, cs.horOfset + j, isThisANewLine, isCleared);
+      Color syntaxCol = s.syntaxColor;
+      Font syntaxFont = s.syntaxFont;
+
       if (isThisANewLine) isThisANewLine = false;
+      if (isCleared) isCleared = false;
       if (regel[j] == ' ' && leadingSpace)
       {
         if (j % 2 == 0)
+        {
+          DrawLineEx((Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y}, (Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y + lineHeight}, 2, (Color){20,20,20,10});
+        }
+        else
         {
           DrawLineEx((Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y}, (Vector2){(0.4 * glphWidth) + leftMargin + gutterWidth + (j * glphWidth), cs.textPos.y + lineHeight}, 2, (Color){20,20,20,20});
         }
@@ -709,7 +792,7 @@ void drawTextEditor()
       else
       {
         leadingSpace = false;
-        DrawTextCodepoint(myFont, regel[j], (Vector2){cs.textPos.x + (j * glphWidth), cs.textPos.y}, textSize, syntaxCol); 
+        DrawTextCodepoint(syntaxFont, regel[j], (Vector2){cs.textPos.x + (j * glphWidth), cs.textPos.y}, textSize, syntaxCol); 
 
       }
     }

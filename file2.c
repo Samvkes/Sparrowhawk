@@ -317,11 +317,11 @@ void drawFileBrowser()
         {
           char str[20] = {0};
           sprintf(str, "%.15s...", bs.higherList[i]);
-          DrawTextEx(myFont, str, (Vector2){30, yPos}, textSize, 0, highCol);
+          DrawTextEx(boldFont, str, (Vector2){30, yPos}, textSize, 0, highCol);
         }
         else
         {
-          DrawTextEx(myFont, bs.higherList[i], (Vector2){30, yPos}, textSize, 0, highCol);
+          DrawTextEx(boldFont, bs.higherList[i], (Vector2){30, yPos}, textSize, 0, highCol);
         }
         spacing += lineHeight;
       }
@@ -362,7 +362,7 @@ void drawFileBrowser()
           bs.peekFileLength = headSpacing / lineHeight;
           if (bs.peekFileLength == 99) strcpy(fileHead, "\t\t\t\t\tTHE FILE CONTINUES FURTHER...");
           if (bs.peekMode) peekCol.a = 200;
-          DrawTextEx(myFont, fileHead, (Vector2){10,headSpacing - (bs.peekOffset *lineHeight)},textSize,0,peekCol);
+          DrawTextEx(boldFont, fileHead, (Vector2){10,headSpacing - (bs.peekOffset *lineHeight)},textSize,0,peekCol);
           headSpacing += lineHeight;
         }
         fclose(fp);
@@ -393,10 +393,10 @@ void drawFileBrowser()
         if (fileCounter != bs.fileSelection)
         {
           DrawRectangle((screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0)+spacing + (bs.scrollOfset * lineHeight), strlen(str) * glphWidth, lineHeight, fileCol);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + 1 + (bs.scrollOfset*lineHeight)}, textSize, 0, BLACK);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + (bs.scrollOfset * lineHeight)}, textSize, 0, WHITE);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing + 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (-1 * bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing - 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + 1 + (bs.scrollOfset*lineHeight)}, textSize, 0, BLACK);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + (bs.scrollOfset * lineHeight)}, textSize, 0, WHITE);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing + 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (-1 * bs.currentDirSize * lineHeight) + (screenHeight/2.0) - (lineHeight/2.0) + spacing - 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
         }
       }
     }
@@ -411,7 +411,7 @@ void drawFileBrowser()
         {
           filesInDir++;
           if (bs.peekMode) peekCol.a = 200;
-          DrawTextEx(myFont, dirEntry->d_name, (Vector2){10,headSpacing},textSize,0,peekCol);
+          DrawTextEx(boldFont, dirEntry->d_name, (Vector2){10,headSpacing},textSize,0,peekCol);
           headSpacing += lineHeight;
         }
         closedir(dp);
@@ -427,9 +427,9 @@ void drawFileBrowser()
         
         if (fileCounter != bs.fileSelection)
         {
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + (bs.scrollOfset * lineHeight)}, textSize, 0, BLACK);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (bs.currentDirSize*lineHeight)+(screenHeight/2.0) - (lineHeight/2.0) + spacing + 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
-          DrawTextEx(myFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (-1 * bs.currentDirSize*lineHeight)+(screenHeight/2.0) - (lineHeight/2.0) + spacing - 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (screenHeight/2.0) - (lineHeight/2.0) + spacing + (bs.scrollOfset * lineHeight)}, textSize, 0, BLACK);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (bs.currentDirSize*lineHeight)+(screenHeight/2.0) - (lineHeight/2.0) + spacing + 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
+          DrawTextEx(boldFont, str, (Vector2){(screenWidth / 2.0) - ((strlen(str)*glphWidth) / 2.0), (-1 * bs.currentDirSize*lineHeight)+(screenHeight/2.0) - (lineHeight/2.0) + spacing - 60 + (bs.scrollOfset * lineHeight)}, textSize, 0, DARKGRAY);
         }
       }
     }
@@ -442,7 +442,7 @@ void drawFileBrowser()
       Color shadow = {0,0,0,80 * fmax((hoffset / 10.0),0.3)};
       DrawRectangleRounded((Rectangle){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0)-glphWidth, 10 + (screenHeight/2.0) - (lineHeight/2.0)+spacing + (bs.scrollOfset * lineHeight), glphWidth*(2+strlen(selStr)), lineHeight},20,5,shadow); 
       DrawRectangleRounded((Rectangle){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0)-glphWidth, hoffset + (screenHeight/2.0) - (lineHeight/2.0)+spacing + (bs.scrollOfset * lineHeight), glphWidth*(2+strlen(selStr)), lineHeight},20,5,ourBlue); 
-      DrawTextEx(myFont, selStr, (Vector2){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0),  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, WHITE);
+      DrawTextEx(boldFont, selStr, (Vector2){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0),  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, WHITE);
       if (filesInDir > 0)
       {
         sprintf(infoStr, "Contains %i file(s)", filesInDir-2); 
@@ -455,14 +455,14 @@ void drawFileBrowser()
       {
         DrawRectangleGradientH((screenWidth / 2.0) + ((strlen(selStr)*glphWidth) / 2.0) + 8,  hoffset + (screenHeight/2.0) + spacing + (lineHeight * bs.scrollOfset),60,2,ourBlue, WHITE);
         DrawRectangleRounded((Rectangle){(screenWidth / 2.0) + ((strlen(selStr)*glphWidth) / 2.0) + 65 - 10,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset), (strlen(infoStr) * glphWidth) + 20, lineHeight},20,5, WHITE);
-        DrawTextEx(myFont, infoStr, (Vector2){(screenWidth / 2.0) + ((strlen(selStr)*glphWidth) / 2.0) + 65,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, ourBlue);
+        DrawTextEx(boldFont, infoStr, (Vector2){(screenWidth / 2.0) + ((strlen(selStr)*glphWidth) / 2.0) + 65,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, ourBlue);
         spacing += 30;
       }
       else
       {
         spacing += lineHeight;
         DrawRectangleRounded((Rectangle){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0) - glphWidth,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset), (strlen(infoStr) * glphWidth) + 20, lineHeight},20,5, WHITE);
-        DrawTextEx(myFont, infoStr, (Vector2){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0) - glphWidth+ 10,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, ourBlue);
+        DrawTextEx(boldFont, infoStr, (Vector2){(screenWidth / 2.0) - ((strlen(selStr)*glphWidth) / 2.0) - glphWidth+ 10,  hoffset + (screenHeight/2.0) - (lineHeight/2.0)+ spacing + (lineHeight * bs.scrollOfset)}, textSize, 0, ourBlue);
         spacing += 30-lineHeight;
         
       }
@@ -488,7 +488,7 @@ void drawFileBrowser()
     {
       DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth, 2+lineHeight},20,5,myDarkBlue);
       DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(cwdBuf)*glphWidth,lineHeight},20,5,myBlue);
-      DrawTextEx(myFont, cwdBuf, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
+      DrawTextEx(boldFont, cwdBuf, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
     }
     else
     {
@@ -496,7 +496,7 @@ void drawFileBrowser()
       snprintf(str, 50, "...\\%s", bs.currentDirName);
       DrawRectangleRounded((Rectangle){10, 2 + screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth, 2+lineHeight},20,5,myDarkBlue);
       DrawRectangleRounded((Rectangle){10, screenHeight-(lineHeight+10), 20+ strlen(str)*glphWidth,lineHeight},20,5,myBlue);
-      DrawTextEx(myFont, str, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
+      DrawTextEx(boldFont, str, (Vector2){20,  screenHeight - (lineHeight+10)}, textSize, 0, myBlack);
     }
   }
 

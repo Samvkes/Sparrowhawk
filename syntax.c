@@ -1,5 +1,6 @@
 #include "./syntax.h"
 #include "./text.h"
+#include "./main.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <math.h>
@@ -8,17 +9,23 @@
 
 char * keywordList[keywordNumber] = {"auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern",  "float", "for",
 																		 "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch",
-																		 "typedef", "union", "unsigned", "void", "volatile", "while"};
+																		 "typedef", "union", "unsigned", "void", "volatile", "while", "#include", "#ifndef", "#endif", "#define"};
 
-Color syntaxHl(int row, int col, bool newLine)
+syntaxRet syntaxHl(int row, int col, bool newLine, bool newClear)
 {
 	static bool lineComment = false;
 	static bool first = true;
 	static char* regel;
 	static char* woorden;
 	static bool stringing = false;
-	const char *braces = "(){}[]<>";
+	static int braceList[10000] = {0};
+	static int braceCounter = 0;
+	// string defined with <> instead of "" 
+	const char *openBraces = "({[";
+	const char *closedBraces = ")}]";
+	const char *splitString = ".,()[]{}; ";
 	const char *punct = "|!?#@^-+=;':.,";
+	syntaxRet syntax = (syntaxRet){STANDARD, myFont};
 
 	if (first)
 	{ 
@@ -26,7 +33,7 @@ Color syntaxHl(int row, int col, bool newLine)
 		regel = calloc(1, sizeof(char));
 		first = false;
 	}
-
+	if (newClear) braceCounter = 0;
 	if (newLine) 
 	{
 		stringing = false;
@@ -50,7 +57,6 @@ Color syntaxHl(int row, int col, bool newLine)
 		int cursor = 0;
 		int gapCounter = 0;
 		int gaps[500] = {0};
-		char *splitString = ".,()[]{} ";
 		bool wasGap = true;
 		bool thisTime = false;
 		for (int i=0; i<strlen(regel); i++)
@@ -83,7 +89,7 @@ Color syntaxHl(int row, int col, bool newLine)
 				}
 				// printf("\nToken '%s'\n", token);
 				if (strcmp(token, "") == 0) cursor += 1;
-				for (int i=0; i<keywordNumber - 1; i++)
+				for (int i=0; i<keywordNumber; i++)
 				{
 					if (strcmp(token, keywordList[i]) == 0)
 					{
@@ -102,55 +108,134 @@ Color syntaxHl(int row, int col, bool newLine)
 	}
 	else if (lineComment)
 	{
-		return COMMENT;
+		syntax.syntaxColor = COMMENT;
+		syntax.syntaxFont = myFont;
+		return syntax;
 	}
 	
 	else if (stringing)
 	{
 		if (text[lin[row].start + col] == '"') stringing = false;
-		return STRING;
+		syntax.syntaxColor = STRING;
+		syntax.syntaxFont = boldFont;
+		return syntax;
 	}
+
 	
 	if (text[lin[row].start + col] == '"')
 	{
 		stringing = true;	
-		return STRING;
+		syntax.syntaxColor = STRING;
+		syntax.syntaxFont = boldFont;
+		return syntax;
 	}
+
 
 	if (text[lin[row].start + col] == '*' || text[lin[row].start + col] == '&')
 	{
-		return KEYWORD;
+		syntax.syntaxColor = PUNCT;
+		syntax.syntaxFont = boldFont;
+		return syntax;
 	}
 
 
 	if (isdigit(text[lin[row].start + col]))
 	{
-		return DIGIT;
+		bool onlydigit = true;
+		bool breakout = false;
+		for (int i=0; i<100; i++)
+		{	
+			if (isdigit(text[lin[row].start + (col+i)])) continue;
+
+			for (int j=0; j<strlen(splitString); j++)
+			{
+				if (text[lin[row].start + (col + i)] == splitString[j])
+				{ 
+					breakout = true;
+					break;
+				}
+			}
+			if (breakout) break;
+			else onlydigit = false;
+		}
+		
+		breakout = false;
+		if (onlydigit)
+		{
+			for (int i=0; i>-100; i--)
+			{
+				if (isdigit(text[lin[row].start + (col+i)])) continue;
+
+				for (int j=0; j<strlen(splitString); j++)
+				{
+					if (text[lin[row].start + (col + i)] == splitString[j]) 
+					{
+						breakout = true;
+						break;
+					}
+				}
+				if (breakout) break;
+				else onlydigit = false;
+			}
+
+			if (onlydigit)
+			{
+				syntax.syntaxColor = DIGIT;
+				syntax.syntaxFont = boldFont;
+				return syntax;
+			}
+		}
 	}
 	
 	
 	if (text[lin[row].start + col] == '/' && text[lin[row].start + col + 1] == '/')
 	{
 		lineComment = true;
-		return COMMENT;
+		syntax.syntaxColor = COMMENT;
+		syntax.syntaxFont = myFont;
+		return syntax;
 	}
 	
 	if (woorden[col] == '~')
 	{
-		return KEYWORD;	
+		syntax.syntaxColor = KEYWORD;
+		syntax.syntaxFont = boldFont;
+		return syntax;	
 	}
 	
-	for (int i=0; i<strlen(braces); i++)
+	for (int i=0; i<strlen(openBraces); i++)
 	{
-		if (woorden[col] == braces[i]) return BRACE;
+		if (woorden[col] == openBraces[i]) 
+		{
+			braceCounter += 1;
+			if (braceCounter % 2 == 0) syntax.syntaxColor = BRACE_A;
+			else syntax.syntaxColor = BRACE_B;
+			syntax.syntaxFont = boldFont;
+			return syntax;
+		}
+	}
+	for (int i=0; i<strlen(closedBraces); i++)
+	{
+		if (woorden[col] == closedBraces[i]) 
+		{
+			if (braceCounter % 2 == 0) syntax.syntaxColor = BRACE_A;
+			else syntax.syntaxColor = BRACE_B;
+			braceCounter -= 1;
+			syntax.syntaxFont = boldFont;
+			return syntax;
+		}
 	}
 		
 	for (int i=0; i<strlen(punct); i++)
 	{
-		if (woorden[col] == punct[i]) return PUNCT;
+		if (woorden[col] == punct[i]) 
+		{
+			syntax.syntaxColor = PUNCT;
+			syntax.syntaxFont = boldFont;
+			return syntax;
+		}
 	}
-		
-
-	
-	return STANDARD;
+			
+	return syntax;
 }
+

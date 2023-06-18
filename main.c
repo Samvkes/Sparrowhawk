@@ -6,8 +6,10 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 
 Font myFont;
+Font boldFont;
 Font gutterFont;
 int glphWidth;
 int lineHeight;
@@ -74,10 +76,12 @@ int main(int argc, char *argv[])
 
 
   // settings
-  char *fontname_std = "resources/JetBrainsMono-Bold.ttf";
+  char *fontname_std = "resources/JetBrainsMono-Medium.ttf";
+  char *fontname_bold = "resources/JetBrainsMono-ExtraBold.ttf";
 
   char *fontname_gut = "resources/iosevka-slab-light.ttf";
   myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+  boldFont = LoadFontEx(fontname_bold, textSize, 0, 0);
   gutterFont = LoadFontEx(fontname_gut, 20, 0, 0);
   SetTextureFilter(myFont.texture, TEXTURE_FILTER_TRILINEAR);
   lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
@@ -169,6 +173,8 @@ int main(int argc, char *argv[])
 
           UnloadFont(myFont);
           myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+          UnloadFont(boldFont);
+          boldFont = LoadFontEx(fontname_bold, textSize, 0, 0);
           chdir(pastDirBuf);
 
           lineHeight = (int)( myFont.recs[0].height + lineHeightPadding);
@@ -185,6 +191,8 @@ int main(int argc, char *argv[])
 
           UnloadFont(myFont);
           myFont = LoadFontEx(fontname_std, textSize, 0, 0);
+          UnloadFont(boldFont);
+          boldFont = LoadFontEx(fontname_bold, textSize, 0, 0);
           chdir(pastDirBuf);
 
           lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
