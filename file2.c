@@ -59,7 +59,7 @@ void initializeFileBrowser()
   bs.scrollOfset = 0;  
   bs.currentDirSize = fileCounter;
   bs.fileSelection = 0;
-	bs.selectedFile = NULL;
+  bs.selectedFile = NULL;
   bs.peekFileLength = 0;
   bs.currentDirName = getCurrentDirName();
   bs.offsetInHigher = 0;
@@ -83,7 +83,7 @@ void initializeFileBrowser()
 
 void handleFileBrowserInputs()
 {
-	struct stat fs;
+  struct stat fs;
   // file actions
   if (IsKeyPressed(KEY_SPACE))
   {
@@ -210,7 +210,7 @@ void handleFileBrowserInputs()
 
       for (int i = 0; i<500; i++)
       {
-  	    *bs.higherList[i] = 0;
+        *bs.higherList[i] = 0;
       }
       DIR *higher = opendir("..");
       fileCounter = 0;
@@ -228,10 +228,10 @@ void handleFileBrowserInputs()
       }
       closedir(higher);
     } 
-		else 
-		{
-			bs.selectedFile = bs.fileList[bs.fileSelection];
-		}
+    else 
+    {
+      bs.selectedFile = bs.fileList[bs.fileSelection];
+    }
   }
 
 
@@ -248,7 +248,7 @@ void handleFileBrowserInputs()
     bs.fileSelection = bs.offsetInHigher+1;
     for (int i = 0; i<500; i++)
     {
-	    *bs.fileList[i] = 0;
+      *bs.fileList[i] = 0;
     }
     struct dirent *entry;
     int fileCounter = 0;
@@ -262,7 +262,7 @@ void handleFileBrowserInputs()
 
     for (int i = 0; i<500; i++)
     {
-	    *bs.higherList[i] = 0;
+      *bs.higherList[i] = 0;
     }
 
     chdir("..");
@@ -290,10 +290,10 @@ void handleFileBrowserInputs()
 
 void drawFileBrowser()
 {
-	struct stat fs;
+  struct stat fs;
   Color peekCol = {0,0,0,20};
-	int fileCounter = 0;
-	int spacing = 0 - (bs.bias*0.8);
+  int fileCounter = 0;
+  int spacing = 0 - (bs.bias*0.8);
   int curCropLength = 35;
   if (bs.isMoving) {
     int quar = screenWidth / 4.0;
@@ -330,7 +330,7 @@ void drawFileBrowser()
     {
       DrawRectangleGradientH(0,0,50,screenHeight,(Color){0,0,0,100},(Color){0,0,0,0}); 
     }
-	  spacing = 0 - (bs.bias*0.8);
+    spacing = 0 - (bs.bias*0.8);
     // DrawRectangleGradientV(0,0,screenWidth,30,(Color){0,0,0,60},(Color){0,0,0,0}); 
   }
 

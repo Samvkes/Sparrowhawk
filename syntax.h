@@ -12,7 +12,8 @@
 // #define BRACE (Color){40,40,130,255}
 #define BRACE_A (Color){40,0,200,255}
 #define BRACE_B (Color){0,0,140,255}
-#define STRING (Color){50,100,10,255}
+// #define STRING (Color){50,100,10,255}
+#define STRING (Color){10,100,10,255}
 // #define STRING (Color){100,220,130,255}
 #define PUNCT (Color){20,20,20,255}
 // #define DIGIT (Color){100,50,0,255}

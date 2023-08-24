@@ -68,6 +68,8 @@ int main(int argc, char *argv[])
   while(!IsRenderTextureReady(tex));
   textSize = 20;
   int hlTextSize = 15;
+  int minTextSize = 6;
+  int maxTextSize = 40;
   puts("\n2\n");
   char startDirBuf[300];
   getcwd(startDirBuf,300);
@@ -146,6 +148,7 @@ int main(int argc, char *argv[])
   {
     shakeScreen(-1,-1,false);
     SetWindowSize(screenWidth, screenHeight);
+    bool textJustResized = false;
     int oncog = 0;
     int onminus = 0;
     int oncross = 0;
@@ -163,7 +166,7 @@ int main(int argc, char *argv[])
     {
       if (currentMode == NORMAL){
 
-        if (IsKeyPressed(KEY_EQUAL)) 
+        if (IsKeyPressed(KEY_EQUAL) && textSize < maxTextSize) 
         {
           char pastDirBuf[300];
           getcwd(pastDirBuf, 300);
@@ -181,7 +184,7 @@ int main(int argc, char *argv[])
           glphWidth = (int)(myFont.recs[0].width);
         }
 
-        if (IsKeyPressed(KEY_MINUS))
+        if (IsKeyPressed(KEY_MINUS) && textSize > minTextSize)
         {
           char pastDirBuf[300];
           getcwd(pastDirBuf, 300);
@@ -197,7 +200,6 @@ int main(int argc, char *argv[])
 
           lineHeight = (int)(myFont.recs[0].height + lineHeightPadding);
           glphWidth = (int)(myFont.recs[0].width);
-
         }
       }
       if (currentlyBrowsing)
@@ -302,7 +304,7 @@ int main(int argc, char *argv[])
       if (isResizing) 
       {
         screenWidth = (wsizeWhenPressed.x + ((getFullMousePos().x - mposWhenPressedL.x)) - ((int)(wsizeWhenPressed.x + (getFullMousePos().x - mposWhenPressedL.x)) % glphWidth));
-        screenHeight = 10 + (wsizeWhenPressed.y + ((getFullMousePos().y - mposWhenPressedL.y)) - ((int)(wsizeWhenPressed.y + (getFullMousePos().y - mposWhenPressedL.y)) % lineHeight));
+        screenHeight = 20 + (wsizeWhenPressed.y + ((getFullMousePos().y - mposWhenPressedL.y)) - ((int)(wsizeWhenPressed.y + (getFullMousePos().y - mposWhenPressedL.y)) % lineHeight));
       }
     }
     

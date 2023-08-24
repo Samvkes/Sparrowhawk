@@ -20,12 +20,26 @@ syntaxRet syntaxHl(int row, int col, bool newLine, bool newClear)
 	static bool stringing = false;
 	static int braceList[10000] = {0};
 	static int braceCounter = 0;
+	static int localSize = -1;
+	static Font strFont;
 	// string defined with <> instead of "" 
 	const char *openBraces = "({[";
 	const char *closedBraces = ")}]";
 	const char *splitString = ".,()[]{}; ";
 	const char *punct = "|!?#@^-+=;':.,";
 	syntaxRet syntax = (syntaxRet){STANDARD, myFont};
+	const char *fontname_str = "resources/JetBrainsMono-Bold.ttf";
+	if (localSize == -1)
+	{
+		localSize = textSize;
+		strFont = LoadFontEx(fontname_str, localSize, 0, 0);
+	}
+	if (localSize != textSize)
+	{
+		localSize = textSize;		
+		UnloadFont(strFont);
+		strFont = LoadFontEx(fontname_str, localSize, 0, 0);
+	}
 
 	if (first)
 	{ 
@@ -117,7 +131,7 @@ syntaxRet syntaxHl(int row, int col, bool newLine, bool newClear)
 	{
 		if (text[lin[row].start + col] == '"') stringing = false;
 		syntax.syntaxColor = STRING;
-		syntax.syntaxFont = boldFont;
+		syntax.syntaxFont = strFont;
 		return syntax;
 	}
 
@@ -126,7 +140,7 @@ syntaxRet syntaxHl(int row, int col, bool newLine, bool newClear)
 	{
 		stringing = true;	
 		syntax.syntaxColor = STRING;
-		syntax.syntaxFont = boldFont;
+		syntax.syntaxFont = strFont;
 		return syntax;
 	}
 

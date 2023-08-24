@@ -202,6 +202,12 @@ int handleText(Vector2 textCursor)
   static int key = 0;
   static int counter = 0;
   int tmpKey = GetKeyPressed();
+  if (tmpKey != 0) printf("%i\n", tmpKey);
+  if (tmpKey == 256) 
+  {
+    currentMode = NORMAL;
+    return position;
+  }
   if (IsKeyReleased(key))
   {
     counter = 0;
@@ -353,6 +359,7 @@ int toMove = 0;
 line *lin;
 char *text;
 int lineCounter;
+int justSaved;
 char * charTable[] = {"'8888,-./01234567898;8=888abcdefghijklmnopqrstuvwxyz[\\]88`", "\"8888<_>?)!@#$%^&*(8:8+888ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}88~"};
 Mode currentMode = NORMAL;
 int gutter_frag_size = 20;
@@ -429,6 +436,8 @@ bool handleTextInput()
     }
     if (IsKeyPressed(KEY_S) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
     {
+      shakeScreen(2,2,true);
+      justSaved = 20;
       fp = fopen(bs.selectedFile, "w");
       fputs(text, fp);
       fclose(fp);
@@ -641,7 +650,7 @@ void drawTextEditor()
   cs.textPos.x = gutterWidth + leftMargin;
   int topMargin = 10;
   int gutterTopMargin = 30;
-  int amountOfLines = screenHeight / lineHeight;
+  int amountOfLines = (screenHeight - 10) / lineHeight;
   float cursorXMicroAdjust = -1;
   int trailAmount = 30;
   static int wiggles = 0;
@@ -654,7 +663,13 @@ void drawTextEditor()
   
   int amountOfGutterPieces = ((screenHeight - (gutter_top_t.height + gutter_bot_t.height + gutterTopMargin + 10)) - wiggles) / gutter_mid_t.height;
   int gutterSpacing = gutterTopMargin + gutter_top_t.height;
-  if (amountOfGutterPieces > -1)
+  if (justSaved > 0) 
+  { 
+    justSaved -= 1;
+    DrawRectangle(0,0,screenWidth, screenHeight, (Color){255,255,255,255 - (10 * (20 - justSaved))}); 
+    return;
+  }
+  if (amountOfGutterPieces > 0)
   {
     DrawTexture(gutter_top_t, leftMargin, gutterTopMargin, WHITE);
     for (int i = 0; i < amountOfGutterPieces; i++)
@@ -668,7 +683,12 @@ void drawTextEditor()
   // cursor drawing
   if (currentMode == NORMAL)
   {
-    Rectangle rec = {cs.cursorPos.x, cs.cursorPos.y, glphWidth, lineHeight};
+    int curWidth = glphWidth;
+    if (cs.textCursor.y == lin[(int)cs.textCursor.x].stop - (lin[(int)cs.textCursor.x].start))
+    {
+      curWidth = 2 * glphWidth; 
+    }
+    Rectangle rec = {cs.cursorPos.x, cs.cursorPos.y, curWidth, lineHeight};
     DrawRectangleRounded(rec, 0.7, 5, cursorColor);
 
   }

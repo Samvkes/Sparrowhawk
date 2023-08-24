@@ -23,7 +23,7 @@ float nLerp(float current, float target, float amount)
   if (current < target)
   {
     current += amount*(target - current);
-    if (current > target) { return target; } 
+    if (current > target) { return target; }
     return current;
   }
   else
@@ -472,7 +472,7 @@ int main(int argc, char *argv[])
             while (match)
             {
               strcpy(oldmatch, match);
-              match = strtok(NULL, "."); 
+              match = strtok(NULL, ".");
             }
             int seedVal = 0;
             for (int i = 0; i<strlen(oldmatch); i++) seedVal += (int)oldmatch[i]*(int)oldmatch[i];
